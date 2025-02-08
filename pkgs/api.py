@@ -84,7 +84,7 @@ class OrDraft:
             - "location": is the address of the establishment or the recipient.
             - "client_name": will always be before the location; sometimes the name of a person is accompanied by the name of an establishment or company.
             - "violations": COPY ONLY the findings and DO NOT generate, DO NOT add extra phrasing, DO NOT DEFINE.
-            - Note: Ignore these terms: ["National capital region", "Philippines", "National Capital Region EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"]
+            - Note: Ignore these terms: ["National capital region", "Philippines", "National Capital Region EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City", "EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"]
 
             PDF_TEXT:
             {pdf_text}
