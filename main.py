@@ -19,16 +19,16 @@ class ViewModel:
         self.model = model
         self.word_processor = WordPlaceholderReplacer()
 
-    def main_handler(self, pdf_path, save_path):
+    def main_handler(self, url, port, pdf_path, save_path):
         self.word_processor.save_file = save_path
 
-        extracted = self._handle_extraction(pdf_path=pdf_path)
+        extracted = self._handle_extraction(pdf_path=pdf_path, url=url, port=port)
 
         self._draft_dismissal(extracted=extracted)
 
-    def _handle_extraction(self, pdf_path: str) -> dict:
+    def _handle_extraction(self, pdf_path: str, url, port) -> dict:
         self.model.pdf_path = pdf_path
-        return self.model.extract_information()
+        return self.model.extract_information(url, port)
 
     def _draft_dismissal(self, extracted: dict) -> bool:
         try:
@@ -48,13 +48,26 @@ class MainWindow(QMainWindow):
     def __init__(self, viewmodel: ViewModel):
         super().__init__()
         self.setWindowTitle("OrDraft")
-        self.setGeometry(100, 100, 600, 200)
+        self.setGeometry(100, 100, 600, 300)  # Adjusted height for extra fields
         self.viewmodel = viewmodel
 
         # Create central widget and layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
+
+        # URL and port fields
+        network_layout = QHBoxLayout()
+        network_layout.addWidget(QLabel("URL:"))
+        self.url_edit = QLineEdit()
+        network_layout.addWidget(self.url_edit)
+
+        network_layout.addWidget(QLabel("Port:"))
+        self.port_edit = QLineEdit()
+        self.port_edit.setPlaceholderText("1234")
+        network_layout.addWidget(self.port_edit)
+
+        layout.addLayout(network_layout)
 
         # Combo box setup
         template_layout = QHBoxLayout()
@@ -76,7 +89,7 @@ class MainWindow(QMainWindow):
         self.browse_btn_file = QPushButton("Browse")
         path_layout.addWidget(self.browse_btn_file)
 
-        # Save
+        # Save location row
         path_layout.addWidget(QLabel("Save Location:"))
         default_save_path = os.path.join(os.path.expanduser("~"), "Documents", "OrDraft")
         os.makedirs(default_save_path, exist_ok=True)
@@ -147,6 +160,8 @@ class MainWindow(QMainWindow):
 
             self.viewmodel.word_processor.template_file = template_file
             self.viewmodel.main_handler(
+                url=self.url_edit.text(),
+                port=self.port_edit.text(),
                 pdf_path=self.path_edit_file.text(),
                 save_path=self.path_edit_save.text(),
             )

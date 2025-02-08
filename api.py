@@ -7,7 +7,7 @@ class OrDraft:
 
     def __init__(
         self,
-        api_url="http://localhost:1234/v1/chat/completions",
+        api_url="http://localhost:1234",
         model="deepseek-r1-distill-qwen-7b",
     ):
         self._pdf_path = None 
@@ -102,7 +102,7 @@ class OrDraft:
         }
         return payload
 
-    def send_request(self, payload):
+    def send_request(self, payload, url, port):
         """
         Sends a POST request to the API endpoint with the given payload.
 
@@ -115,7 +115,17 @@ class OrDraft:
         headers = {"Content-Type": "application/json"}  # new
         try:
             # new: Send the request to the API endpoint
-            response = requests.post(self.api_url, headers=headers, data=json.dumps(payload))  # new
+            url_port = None
+
+            url_port = f"{url}:{port}" if port else None
+            if not url_port:
+                url_port = url if url else None
+
+            this_url = url_port if url_port else self.api_url
+
+            this_url = f"{this_url}/v1/chat/completions"
+
+            response = requests.post(this_url, headers=headers, data=json.dumps(payload))  # new
             response.raise_for_status()  # new: Raise an error for bad HTTP responses
             return response.json()  # new
         except requests.RequestException as e:
@@ -157,7 +167,7 @@ class OrDraft:
             print("JSON block not found in the response.")  
             return None
 
-    def extract_information(self):
+    def extract_information(self, url, port):
         """
         High-level method to extract information from the PDF and retrieve structured data via the API.
 
@@ -170,7 +180,7 @@ class OrDraft:
             return None
 
         payload = self.build_payload(pdf_text)  
-        response_json = self.send_request(payload)  
+        response_json = self.send_request(payload, url, port)  
         return self.parse_response(response_json)  
 
 if __name__ == '__main__':
