@@ -8,11 +8,10 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 
-from api import OrDraft
-from placeholder_replacer import WordPlaceholderReplacer
+from pkgs.api import OrDraft
+from pkgs.placeholder_replacer import WordPlaceholderReplacer
 
-
-from enums import TemplateFile, TemplateType
+from pkgs.enums import TemplateFile, TemplateType
 
 class ViewModel:
 
