@@ -38,7 +38,7 @@ class ViewModel:
             print(extracted)
 
             self.word_processor.replace_placeholders(extracted)
-            self.word_processor.save()
+            self.word_processor.save(case_number)
         except Exception as e:
             print(e)
             return

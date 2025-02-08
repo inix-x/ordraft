@@ -100,9 +100,9 @@ class WordPlaceholderReplacer:
                 new_run.font.name = first_run.font.name
                 new_run.font.size = first_run.font.size
 
-    def save(self):
+    def save(self, filename):
         """Saves the modified Word document to the output file."""
-        path = os.path.join(self.save_file, "OUTPUT.docx")
+        path = os.path.join(self.save_file, f"{filename}.docx")
         self.document.save(path)
 
 
