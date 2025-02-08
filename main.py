@@ -11,6 +11,8 @@ from api import OrDraft
 from placeholder_replacer import WordPlaceholderReplacer
 
 
+from enums import TemplateFile, TemplateType
+
 class ViewModel:
 
     def __init__(self, model: OrDraft):
@@ -18,7 +20,6 @@ class ViewModel:
         self.word_processor = WordPlaceholderReplacer()
 
     def main_handler(self, pdf_path, save_path):
-        self.word_processor.template_file = "C:\\Users\\omarg\\OrDraft\\templates\\order_hw_reply.docx"
         self.word_processor.save_file = save_path
 
         extracted = self._handle_extraction(pdf_path=pdf_path)
@@ -59,7 +60,7 @@ class MainWindow(QMainWindow):
         template_layout = QHBoxLayout()
         template_layout.addWidget(QLabel("Template:"))
         self.combo = QComboBox()
-        self.combo.addItems(["Desktop", "Documents", "Downloads", "Custom"])
+        self.combo.addItems([template.value for template in TemplateType])
         template_layout.addWidget(self.combo, stretch=1)
         layout.addLayout(template_layout)
 
@@ -136,17 +137,20 @@ class MainWindow(QMainWindow):
 
     def process(self):
         include_reply = self.include_reply_checkbox.isChecked()
-        self.viewmodel.main_handler(
-            pdf_path=self.path_edit_file.text(),
-            save_path=self.path_edit_save.text(),
-        )
+        selected_template = TemplateType(self.combo.currentText())
 
-        if include_reply:
-            print("Including reply in the document...")
-            # Additional processing if reply is included.
-        else:
-            print("Skipping the reply section.")
-            # Skip reply-related logic.
+        try:
+            template_file = TemplateFile.get_template_file(selected_template, include_reply)
+            print(f"Using template: {template_file}")
+
+            self.viewmodel.word_processor.template_file = template_file
+            self.viewmodel.main_handler(
+                pdf_path=self.path_edit_file.text(),
+                save_path=self.path_edit_save.text(),
+            )
+        except ValueError as e:
+            QMessageBox.critical(self, "Error", str(e))
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
