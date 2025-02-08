@@ -78,9 +78,11 @@ class MainWindow(QMainWindow):
 
         # Save
         path_layout.addWidget(QLabel("Save Location:"))
+        default_save_path = os.path.join(os.path.expanduser("~"), "Documents", "OrDraft")
+        os.makedirs(default_save_path, exist_ok=True)
         self.path_edit_save = QLineEdit()
         self.path_edit_save.setReadOnly(True)
-        self.path_edit_save.setText("C:\\Users\\omarg\\OrDraft")
+        self.path_edit_save.setText(default_save_path)
         path_layout.addWidget(self.path_edit_save)
 
         self.browse_btn_save = QPushButton("Browse")
