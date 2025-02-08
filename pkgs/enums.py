@@ -7,14 +7,14 @@ class TemplateType(Enum):
     WATER = "water"
 
 class TemplateFile(Enum):
-    HW_REPLY = "../templates/order_hw_reply.docx"
-    HW_NO_REPLY = "../templates/order_hw_no_reply.docx"
-    PD_REPLY = "../templates/order_pd_reply.docx"
-    PD_NO_REPLY = "../templates/order_pd_no_reply.docx"
-    AIR_REPLY = "../templates/order_air_reply.docx"
-    AIR_NO_REPLY = "../templates/order_air_no_reply.docx"
-    WATER_REPLY = "../templates/order_water_reply.docx"
-    WATER_NO_REPLY = "../templates/order_water_no_reply.docx"
+    HW_REPLY = "templates/order_hw_reply.docx"
+    HW_NO_REPLY = "templates/order_hw_no_reply.docx"
+    PD_REPLY = "templates/order_pd_reply.docx"
+    PD_NO_REPLY = "templates/order_pd_no_reply.docx"
+    AIR_REPLY = "templates/order_air_reply.docx"
+    AIR_NO_REPLY = "templates/order_air_no_reply.docx"
+    WATER_REPLY = "templates/order_water_reply.docx"
+    WATER_NO_REPLY = "templates/order_water_no_reply.docx"
 
     @staticmethod
     def get_template_file(template_type: TemplateType, include_reply: bool) -> str:

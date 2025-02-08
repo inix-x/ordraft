@@ -48,7 +48,8 @@ class MainWindow(QMainWindow):
     def __init__(self, viewmodel: ViewModel):
         super().__init__()
         self.setWindowTitle("OrDraft")
-        self.setWindowIcon(QIcon("icon.ico"))
+        icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
+        self.setWindowIcon(QIcon(icon_filepath))
         self.setGeometry(100, 100, 600, 300)  # Adjusted height for extra fields
         self.viewmodel = viewmodel
 
@@ -157,9 +158,9 @@ class MainWindow(QMainWindow):
 
         try:
             template_file = TemplateFile.get_template_file(selected_template, include_reply)
-            print(f"Using template: {template_file}")
-
-            self.viewmodel.word_processor.template_file = template_file
+            # print(f"Using template: {template_file}")
+            template_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_file)
+            self.viewmodel.word_processor.template_file = template_filepath
             self.viewmodel.main_handler(
                 url=self.url_edit.text(),
                 port=self.port_edit.text(),
@@ -173,6 +174,12 @@ class MainWindow(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     window = MainWindow(ViewModel(OrDraft()))
+
+    window.setWindowFlags(window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)  
+    window.show()
+    window.raise_()  
+    window.activateWindow()  
+
     window.show()
     sys.exit(app.exec())
 
