@@ -171,8 +171,11 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Error", str(e))
 
 
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     window = MainWindow(ViewModel(OrDraft()))
     window.show()
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()
