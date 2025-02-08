@@ -5,8 +5,8 @@ from functools import partial
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QIcon, QDesktopServices
 
 from pkgs.api import OrDraft
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
@@ -51,6 +51,8 @@ class MainWindow(QMainWindow):
         icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
         self.setWindowIcon(QIcon(icon_filepath))
         self.setGeometry(100, 100, 600, 300)  # Adjusted height for extra fields
+        self.setFixedHeight(250)
+        self.setFixedWidth(600)
         self.viewmodel = viewmodel
 
         # Create central widget and layout
@@ -80,28 +82,33 @@ class MainWindow(QMainWindow):
         layout.addLayout(template_layout)
 
         # Path selection row
-        path_layout = QHBoxLayout()
-        layout.addLayout(path_layout)
-        path_layout.addWidget(QLabel("File location:"))
+        doc_layout = QHBoxLayout()
+        layout.addLayout(doc_layout)
+        doc_layout.addWidget(QLabel("File location:"))
 
         self.path_edit_file = QLineEdit()
         self.path_edit_file.setReadOnly(True)
-        path_layout.addWidget(self.path_edit_file)
+        doc_layout.addWidget(self.path_edit_file)
 
         self.browse_btn_file = QPushButton("Browse")
-        path_layout.addWidget(self.browse_btn_file)
+        doc_layout.addWidget(self.browse_btn_file)
 
         # Save location row
-        path_layout.addWidget(QLabel("Save Location:"))
+        save_layout = QHBoxLayout()
+        layout.addLayout(save_layout)
+        save_layout.addWidget(QLabel("Save Location:"))
         default_save_path = os.path.join(os.path.expanduser("~"), "Documents", "OrDraft")
         os.makedirs(default_save_path, exist_ok=True)
         self.path_edit_save = QLineEdit()
         self.path_edit_save.setReadOnly(True)
         self.path_edit_save.setText(default_save_path)
-        path_layout.addWidget(self.path_edit_save)
+        save_layout.addWidget(self.path_edit_save)
 
-        self.browse_btn_save = QPushButton("Browse")
-        path_layout.addWidget(self.browse_btn_save)
+        self.browse_btn_save = QPushButton("...")
+        save_layout.addWidget(self.browse_btn_save)
+
+        self.open_dir = QPushButton("Open")
+        save_layout.addWidget(self.open_dir)
 
         # Checkbox for including reply
         self.include_reply_checkbox = QCheckBox("Include Reply")
@@ -117,12 +124,21 @@ class MainWindow(QMainWindow):
         self.browse_btn_file.clicked.connect(partial(self.browse_directory, 0))
         self.browse_btn_save.clicked.connect(partial(self.browse_directory, 1))
         self.save_btn.clicked.connect(self.save_data)
+        self.open_dir.clicked.connect(self.show_dir)
 
         # Initialize path
         self.update_template(self.combo.currentText())
 
     def update_template(self, text):
         pass
+
+    def show_dir(self):
+        # Ensure the path is absolute
+        full_path = os.path.abspath(self.path_edit_save.text())
+        # Convert the file path to a QUrl
+        url = QUrl.fromLocalFile(full_path)
+        # Open the directory using QDesktopServices
+        QDesktopServices.openUrl(url)
 
     def browse_directory(self, type):
         if type == 0:
@@ -175,7 +191,7 @@ def main():
     app = QApplication(sys.argv)
     window = MainWindow(ViewModel(OrDraft()))
 
-    window.setWindowFlags(window.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)  
+    window.setWindowFlags(window.windowFlags())  
     window.show()
     window.raise_()  
     window.activateWindow()  
