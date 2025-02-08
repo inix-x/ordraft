@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 
 from api import OrDraft
 from placeholder_replacer import WordPlaceholderReplacer
@@ -48,6 +49,7 @@ class MainWindow(QMainWindow):
     def __init__(self, viewmodel: ViewModel):
         super().__init__()
         self.setWindowTitle("OrDraft")
+        self.setWindowIcon(QIcon("icon.ico"))
         self.setGeometry(100, 100, 600, 300)  # Adjusted height for extra fields
         self.viewmodel = viewmodel
 
