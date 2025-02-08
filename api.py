@@ -112,26 +112,28 @@ class OrDraft:
         Returns:
             dict: The JSON response from the API or None if the request fails.
         """
-        headers = {"Content-Type": "application/json"}  # new
+        headers = {"Content-Type": "application/json"}
         try:
-            # new: Send the request to the API endpoint
-            url_port = None
+            # Remove any leading/trailing spaces from the URL and port
+            url = url.strip() if url else ""
+            port = str(port).strip() if port else ""
 
-            url_port = f"{url}:{port}" if port else None
+            # Build the full URL with port if available
+            url_port = f"{url}:{port}" if port else url
             if not url_port:
-                url_port = url if url else None
+                url_port = self.api_url
 
-            this_url = url_port if url_port else self.api_url
+            # Ensure the URL doesn't have unwanted spaces
+            this_url = f"{url_port}/v1/chat/completions" if url_port else self.api_url
 
-            this_url = f"{this_url}/v1/chat/completions"
-
-            response = requests.post(this_url, headers=headers, data=json.dumps(payload))  # new
-            response.raise_for_status()  # new: Raise an error for bad HTTP responses
-            return response.json()  # new
+            response = requests.post(this_url, headers=headers, data=json.dumps(payload))
+            response.raise_for_status()  # Raise an error for bad HTTP responses
+            return response.json()  # Return JSON response
         except requests.RequestException as e:
-            # new: Log errors related to the HTTP request
-            print(f"Error occurred during API request: {e}")  # new
+            # Log any errors that occur
+            print(f"Error occurred during API request: {e}")
             return None
+
 
     def parse_response(self, response_json):
         """
