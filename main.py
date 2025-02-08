@@ -1,0 +1,155 @@
+import sys
+import os
+from functools import partial
+
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
+                             QHBoxLayout, QComboBox, QPushButton, QLineEdit,
+                             QFileDialog, QMessageBox, QLabel, QCheckBox)
+from PyQt6.QtCore import Qt
+
+from api import OrDraft
+from placeholder_replacer import WordPlaceholderReplacer
+
+
+class ViewModel:
+
+    def __init__(self, model: OrDraft):
+        self.model = model
+        self.word_processor = WordPlaceholderReplacer()
+
+    def main_handler(self, pdf_path, save_path):
+        self.word_processor.template_file = "C:\\Users\\omarg\\OrDraft\\templates\\order_hw_reply.docx"
+        self.word_processor.save_file = save_path
+
+        extracted = self._handle_extraction(pdf_path=pdf_path)
+
+        self._draft_dismissal(extracted=extracted)
+
+    def _handle_extraction(self, pdf_path: str) -> dict:
+        self.model.pdf_path = pdf_path
+        return self.model.extract_information()
+
+    def _draft_dismissal(self, extracted: dict) -> bool:
+        try:
+            case_number: str = extracted.get("case_number")
+            extracted["case_number_only"] = case_number[-9:]
+
+            print(extracted)
+
+            self.word_processor.replace_placeholders(extracted)
+            self.word_processor.save()
+        except Exception as e:
+            print(e)
+            return
+
+
+class MainWindow(QMainWindow):
+    def __init__(self, viewmodel: ViewModel):
+        super().__init__()
+        self.setWindowTitle("OrDraft")
+        self.setGeometry(100, 100, 600, 200)
+        self.viewmodel = viewmodel
+
+        # Create central widget and layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
+
+        # Combo box setup
+        template_layout = QHBoxLayout()
+        template_layout.addWidget(QLabel("Template:"))
+        self.combo = QComboBox()
+        self.combo.addItems(["Desktop", "Documents", "Downloads", "Custom"])
+        template_layout.addWidget(self.combo, stretch=1)
+        layout.addLayout(template_layout)
+
+        # Path selection row
+        path_layout = QHBoxLayout()
+        layout.addLayout(path_layout)
+        path_layout.addWidget(QLabel("File location:"))
+
+        self.path_edit_file = QLineEdit()
+        self.path_edit_file.setReadOnly(True)
+        path_layout.addWidget(self.path_edit_file)
+
+        self.browse_btn_file = QPushButton("Browse")
+        path_layout.addWidget(self.browse_btn_file)
+
+        # Save
+        path_layout.addWidget(QLabel("Save Location:"))
+        self.path_edit_save = QLineEdit()
+        self.path_edit_save.setReadOnly(True)
+        self.path_edit_save.setText("C:\\Users\\omarg\\OrDraft")
+        path_layout.addWidget(self.path_edit_save)
+
+        self.browse_btn_save = QPushButton("Browse")
+        path_layout.addWidget(self.browse_btn_save)
+
+        # Checkbox for including reply
+        self.include_reply_checkbox = QCheckBox("Include Reply")
+        self.include_reply_checkbox.setChecked(True)  # Default: checked
+        layout.addWidget(self.include_reply_checkbox)
+
+        # Save button
+        self.save_btn = QPushButton("Save")
+        layout.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignHCenter, stretch=2)
+
+        # Connect signals
+        self.combo.currentTextChanged.connect(self.update_template)
+        self.browse_btn_file.clicked.connect(partial(self.browse_directory, 0))
+        self.browse_btn_save.clicked.connect(partial(self.browse_directory, 1))
+        self.save_btn.clicked.connect(self.save_data)
+
+        # Initialize path
+        self.update_template(self.combo.currentText())
+
+    def update_template(self, text):
+        pass
+
+    def browse_directory(self, type):
+        if type == 0:
+            file_path, _ = QFileDialog.getOpenFileName(None, "Select a File", "", "All Files (*)")
+        else:
+            directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+
+        if type == 0:
+            self.path_edit_file.setText(file_path)
+        elif type == 1:
+            if not (directory is None or len(directory) == 0):
+                self.path_edit_save.setText(directory)
+
+    def save_data(self):
+        path = self.path_edit_save.text()
+        if not path:
+            QMessageBox.critical(self, "Error", "Please select a save location!")
+            return
+
+        if not os.path.exists(path):
+            try:
+                os.makedirs(path, exist_ok=True)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Could not create directory: {str(e)}")
+                return
+
+        self.process()
+        QMessageBox.information(self, "Success", f"Data saved successfully to:\n{path}")
+
+    def process(self):
+        include_reply = self.include_reply_checkbox.isChecked()
+        self.viewmodel.main_handler(
+            pdf_path=self.path_edit_file.text(),
+            save_path=self.path_edit_save.text(),
+        )
+
+        if include_reply:
+            print("Including reply in the document...")
+            # Additional processing if reply is included.
+        else:
+            print("Skipping the reply section.")
+            # Skip reply-related logic.
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow(ViewModel(OrDraft()))
+    window.show()
+    sys.exit(app.exec())
