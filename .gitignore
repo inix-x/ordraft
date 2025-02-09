@@ -4,3 +4,6 @@ dist/
 .dist/*
 build/*
 build/
+__pycache__/
+*.py[cod]
+*$py.class
