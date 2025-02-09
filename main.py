@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
                              QTextEdit, QMenu)
-from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSlot, pyqtSignal
+from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSlot, pyqtSignal, QStandardPaths
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
 from pkgs.api import OrDraft
@@ -93,6 +93,11 @@ class MainWindow(QMainWindow):
         self.combo = QComboBox()
         self.combo.addItems([template.value for template in TemplateType])
         template_layout.addWidget(self.combo, stretch=1)
+
+        # Checkbox for including reply
+        self.include_reply_checkbox = QCheckBox("with Reply")
+        self.include_reply_checkbox.setChecked(True)  # Default: checked
+        template_layout.addWidget(self.include_reply_checkbox)
         layout.addLayout(template_layout)
 
         # Path selection row
@@ -124,10 +129,7 @@ class MainWindow(QMainWindow):
         self.open_dir = QPushButton("Open")
         save_layout.addWidget(self.open_dir)
 
-        # Checkbox for including reply
-        self.include_reply_checkbox = QCheckBox("Include Reply")
-        self.include_reply_checkbox.setChecked(True)  # Default: checked
-        layout.addWidget(self.include_reply_checkbox)
+
 
         self.custom_prompt = QCheckBox("Customize Prompt")
         self.custom_prompt.setChecked(False)
@@ -206,7 +208,8 @@ class MainWindow(QMainWindow):
 
     def browse_directory(self, type):
         if type == 0:
-            file_path, _ = QFileDialog.getOpenFileName(None, "Select a File", "", "All Files (*)")
+            download_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
+            file_path, _ = QFileDialog.getOpenFileName(None, "Select a File", download_dir, "All Files (*)")
         else:
             directory = QFileDialog.getExistingDirectory(self, "Select Directory")
 
