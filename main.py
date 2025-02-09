@@ -5,9 +5,9 @@ from functools import partial
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
-                             QTextEdit)
+                             QTextEdit, QMenu)
 from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSlot, pyqtSignal
-from PyQt6.QtGui import QIcon, QDesktopServices
+from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
 from pkgs.api import OrDraft
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
@@ -61,17 +61,20 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("OrDraft")
         icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
         self.setWindowIcon(QIcon(icon_filepath))
-        self.setGeometry(100, 100, 600, 300)  # Adjusted height for extra fields
+        self.setGeometry(100, 100, 600, 300)  
         self.setFixedHeight(350)
         self.setFixedWidth(600)
         self.viewmodel = viewmodel
 
-        # Create central widget and layout
+        self.template_parent_dir = None
+
+        self.setup_menu()
+        
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        # URL and port fields
+        
         network_layout = QHBoxLayout()
         network_layout.addWidget(QLabel("URL:"))
         self.url_edit = QLineEdit()
@@ -152,6 +155,35 @@ class MainWindow(QMainWindow):
         # Initialize path
         self.update_template(self.combo.currentText())
 
+    def setup_menu(self):
+        menu_bar = self.menuBar()  # QMainWindow has a built-in menu bar
+        file_menu = menu_bar.addMenu("File")
+
+        # # Create an action for changing the template directory
+        change_template_dir_action = QAction("Show Template folder", self)
+        change_template_dir_action.triggered.connect(self.show_template_dir)
+        file_menu.addAction(change_template_dir_action)
+
+        # Example: Another potential action (optional)
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        # ------------------------------------------
+
+    def show_template_dir(self):
+        QMessageBox.information(self, "Reminder", '''
+        1. Maintain the original filenames of the templates; do not rename them.
+        2. Do not delete the template files.
+        3. You may modify the templates, but {{placeholders}} must remain intact.
+        ''')
+        app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", "Templates")
+        try:
+            url = QUrl.fromLocalFile(app_data_path)
+        except Exception as e:
+            os.makedirs(app_data_path, exist_ok=True)
+        finally:
+            QDesktopServices.openUrl(url)
+
     def update_template(self, text):
         pass
 
@@ -206,7 +238,7 @@ class MainWindow(QMainWindow):
         if success:
             QMessageBox.information(self, "Success", f"Generated Document saved successfully to:\n{self.path_edit_save.text()}")
         else:
-            QMessageBox.information(self, "Error", "Something went wrong!")
+            QMessageBox.critical(self, "Error", "Something went wrong!")
 
 
     def process(self):
@@ -218,8 +250,11 @@ class MainWindow(QMainWindow):
 
         try:
             template_file = TemplateFile.get_template_file(selected_template, include_reply)
-            # print(f"Using template: {template_file}")
-            template_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_file)
+            app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft")
+            os.makedirs(app_data_path, exist_ok=True)
+            dir = app_data_path if self.template_parent_dir is None else self.template_parent_dir
+            template_filepath = os.path.join(dir, template_file)
+            
             self.viewmodel.word_processor.template_file = template_filepath
             self.viewmodel.main_handler(
                 url=self.url_edit.text(),
