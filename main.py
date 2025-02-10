@@ -5,7 +5,7 @@ from functools import partial
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
-                             QTextEdit, QMenu)
+                             QTextEdit)
 from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSlot, pyqtSignal, QStandardPaths
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
@@ -182,6 +182,7 @@ class MainWindow(QMainWindow):
         try:
             url = QUrl.fromLocalFile(app_data_path)
         except Exception as e:
+            print(e)
             os.makedirs(app_data_path, exist_ok=True)
         finally:
             QDesktopServices.openUrl(url)
