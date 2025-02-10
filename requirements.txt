@@ -2,5 +2,5 @@ pdfplumber==0.11.5
 PyQt6==6.8.1
 PyQt6_sip==13.6.0
 PyQt6_sip==13.10.0
-python_docx==1.1.2
 Requests==2.32.3
+docxtpl==0.19.1
