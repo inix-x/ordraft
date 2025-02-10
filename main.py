@@ -26,10 +26,24 @@ class ViewModel(QObject):
         
         self.model.data_received.connect(self._draft_dismissal)
 
-    def main_handler(self, url, port, pdf_path, save_path, custom_prompt=None):
-        self.word_processor.save_file = save_path
+    def main_handler(self, url, port, pdf_path, save_path, custom_prompt=None) -> tuple[bool, object]:
+        try:
+            if url is None:
+                raise TypeError("Url is cannot be none")
+            if pdf_path is None:
+                raise TypeError("File cannot be none")
+            if len(url) == 0:
+                raise TypeError("URL cannot be empty")
+            if len(pdf_path) == 0:
+                raise TypeError("File cannot be empty")
 
-        self._handle_extraction(pdf_path=pdf_path, url=url, port=port, custom_prompt=custom_prompt)
+            self.word_processor.save_file = save_path
+
+            self._handle_extraction(pdf_path=pdf_path, url=url, port=port, custom_prompt=custom_prompt)
+            return True, None
+        except Exception as e:
+            print(e)
+            return False, e
 
     def _handle_extraction(self, pdf_path: str, url, port, custom_prompt=None) -> dict:
         self.model.pdf_path = pdf_path
@@ -260,15 +274,20 @@ class MainWindow(QMainWindow):
             template_filepath = os.path.join(dir, template_file)
             
             self.viewmodel.word_processor.template_file = template_filepath
-            self.viewmodel.main_handler(
+            success, e = self.viewmodel.main_handler(
                 url=self.url_edit.text(),
                 port=self.port_edit.text(),
                 pdf_path=self.path_edit_file.text(),
                 save_path=self.path_edit_save.text(),
                 custom_prompt=custom_prompt
             )
-        except ValueError as e:
+            if not success:
+                raise RuntimeError(f"Error occured: {e}")
+
+        except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+        finally:
+            self.setEnabled(True)
 
 
 def main():
