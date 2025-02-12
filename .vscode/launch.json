@@ -6,10 +6,17 @@
     "configurations": [
     
         {
-            "name": "Python Debugger: Current File",
+            "name": "Python Debugger: Main",
             "type": "debugpy",
             "request": "launch",
             "program": "${cwd}/main.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
             "console": "integratedTerminal"
         }
     ]

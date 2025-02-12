@@ -1,33 +1,57 @@
 import os
 from docxtpl import DocxTemplate
 
+from .types import DocPayload, Document
+
 class WordPlaceholderReplacer:
+
     def __init__(self):
         """
         Initializes the WordPlaceholderReplacer with input and output file paths.
         """
         self._template_file = None
-        self._output_file = None
+        self._save_location = None
         self._template = None
 
     @property
-    def save_file(self):
-        return self._output_file
+    def save_location(self):
+        return self._save_location
 
-    @save_file.setter
-    def save_file(self, path):
-        self._output_file = path
+    @save_location.setter
+    def save_location(self, path):
+        self._save_location = path
 
     @property
-    def template_file(self):
+    def template_filepath(self):
         return self._template_file
 
-    @template_file.setter
-    def template_file(self, path):
+    @template_filepath.setter
+    def template_filepath(self, path):
         self._template_file = path
         self._template = DocxTemplate(path)
 
-    def replace_placeholders(self, replacements):
+    def draft_dismissal(self, api_data: DocPayload, document: Document) -> Document:
+        try:
+            api_data.validate()
+        except ValueError as ve:
+            document.doc_payload.error_occured = ve
+            return
+        try:
+            case_number: str = api_data.api_response.get("case_number")
+            api_data.api_response["case_number_only"] = case_number[-9:]
+
+            self._replace_placeholders(api_data.api_response)
+            doc_filepath = self._save(document.temp_doc_data.save_path, case_number)
+            document.file_name = f"{case_number}.docx"
+            document.save_filepath = doc_filepath
+            document.doc_payload.status = "Document Generated"
+        except Exception as e:
+            document.doc_payload.status = "Error Occured"
+            document.doc_payload.error_occured = e
+        finally:
+            return document
+
+    def _replace_placeholders(self, replacements):
         """
         Replaces placeholders in the Word document using the provided replacements dictionary.
 
@@ -57,10 +81,11 @@ class WordPlaceholderReplacer:
             return value.replace("\n", " ").strip()
         return value  
 
-    def save(self, filename):
+    def _save(self, save_location, filename) -> str:
         """Saves the modified Word document to the output file."""
-        path = os.path.join(self.save_file, f"{filename}.docx")
+        path = os.path.join(save_location, f"{filename}.docx")
         self._template.save(path)
+        return path
 
 if __name__ == "__main__":
     data = {

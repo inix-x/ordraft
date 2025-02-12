@@ -1,73 +1,24 @@
 import sys
 import os
+import traceback
 from functools import partial
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
-                             QTextEdit)
-from PyQt6.QtCore import Qt, QUrl, QObject, pyqtSlot, pyqtSignal, QStandardPaths
+                             QTextEdit, QListWidget, QListWidgetItem)
+from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
-from pkgs.api import OrDraft
-from pkgs.placeholder_replacer import WordPlaceholderReplacer
-
-from pkgs.enums import TemplateFile, TemplateType
-from pkgs.config import DEFAULT_GUIDELINES
-
-class ViewModel(QObject):
-    processing_finished = pyqtSignal(bool)
-
-    def __init__(self, model: OrDraft):
-        super().__init__()
-        
-        self.model = model
-        self.word_processor = WordPlaceholderReplacer()
-        
-        self.model.data_received.connect(self._draft_dismissal)
-
-    def main_handler(self, url, port, pdf_path, save_path, custom_prompt=None) -> tuple[bool, object]:
-        try:
-            if url is None:
-                raise TypeError("Url is cannot be none")
-            if pdf_path is None:
-                raise TypeError("File cannot be none")
-            if len(url) == 0:
-                raise TypeError("URL cannot be empty")
-            if len(pdf_path) == 0:
-                raise TypeError("File cannot be empty")
-
-            self.word_processor.save_file = save_path
-
-            self._handle_extraction(pdf_path=pdf_path, url=url, port=port, custom_prompt=custom_prompt)
-            return True, None
-        except Exception as e:
-            print(e)
-            return False, e
-
-    def _handle_extraction(self, pdf_path: str, url, port, custom_prompt=None) -> dict:
-        self.model.pdf_path = pdf_path
-        self.model.extract_information(url, port, custom_prompt)
-
-    @pyqtSlot(dict)
-    def _draft_dismissal(self, extracted: dict) -> bool:
-        try:
-            if len(extracted) == 0:
-                raise ValueError("No data received!")
-
-            case_number: str = extracted.get("case_number")
-            extracted["case_number_only"] = case_number[-9:]
-
-            print(extracted)
-
-            self.word_processor.replace_placeholders(extracted)
-            self.word_processor.save(case_number)
-            self.processing_finished.emit(True)
-        except Exception as e:
-            print(e)
-            self.processing_finished.emit(False)
-            return
-
+from pkgs import (
+    DEFAULT_GUIDELINES, 
+    TemplateType, 
+    ViewModel, 
+    GenerateDocData,
+    Data,
+    UpdateDocData,
+    CustomListItem
+)
 
 class MainWindow(QMainWindow):
     def __init__(self, viewmodel: ViewModel):
@@ -75,20 +26,26 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("OrDraft")
         icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
         self.setWindowIcon(QIcon(icon_filepath))
-        self.setGeometry(100, 100, 600, 300)  
-        self.setFixedHeight(350)
+        self.setGeometry(100, 100, 600, 500)  
+        self.setFixedHeight(500)
         self.setFixedWidth(600)
         self.viewmodel = viewmodel
 
-        self.template_parent_dir = None
-
         self.setup_menu()
-        
+
+        # Central Widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        
+        # List widget
+        layout.addWidget(QLabel("Tasks"))
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.list_widget.setHorizontalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self.list_widget.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        layout.addWidget(self.list_widget)
+
         network_layout = QHBoxLayout()
         network_layout.addWidget(QLabel("URL:"))
         self.url_edit = QLineEdit()
@@ -143,13 +100,11 @@ class MainWindow(QMainWindow):
         self.open_dir = QPushButton("Open")
         save_layout.addWidget(self.open_dir)
 
-
-
         self.custom_prompt = QCheckBox("Customize Prompt")
         self.custom_prompt.setChecked(False)
 
         layout.addWidget(self.custom_prompt)
-        
+
         self.prompt = QTextEdit()
         self.prompt.setFixedHeight(100)
         self.prompt.setEnabled(False)
@@ -166,14 +121,17 @@ class MainWindow(QMainWindow):
         self.generate.clicked.connect(self.save_data)
         self.open_dir.clicked.connect(self.show_dir)
         self.custom_prompt.checkStateChanged.connect(self.handle_show_prompt)
-        self.viewmodel.processing_finished.connect(self._on_process_done)
 
+        self.viewmodel.processing_finished.connect(self._on_process_done)
+        self.viewmodel.docEvents.connect(self._update_doc_status_list)
+        self.viewmodel.duplicateDetected.connect(self._duplicate)
+        self.viewmodel.docOpened.connect(self._doc_opened)
         # Initialize path
         self.update_template(self.combo.currentText())
 
     def setup_menu(self):
         menu_bar = self.menuBar()  # QMainWindow has a built-in menu bar
-        file_menu = menu_bar.addMenu("File")
+        file_menu = menu_bar.addMenu("App")
 
         # # Create an action for changing the template directory
         change_template_dir_action = QAction("Show Template folder", self)
@@ -258,41 +216,86 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.critical(self, "Error", "Something went wrong!")
 
-
+    @pyqtSlot()
     def process(self):
         self.setEnabled(False)
-        include_reply = self.include_reply_checkbox.isChecked()
-        selected_template = TemplateType(self.combo.currentText())
-        
-        custom_prompt = self.prompt.toPlainText() if self.custom_prompt.isChecked() else None
-
         try:
-            template_file = TemplateFile.get_template_file(selected_template, include_reply)
-            app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft")
-            os.makedirs(app_data_path, exist_ok=True)
-            dir = app_data_path if self.template_parent_dir is None else self.template_parent_dir
-            template_filepath = os.path.join(dir, template_file)
-            
-            self.viewmodel.word_processor.template_file = template_filepath
-            success, e = self.viewmodel.main_handler(
+            data = GenerateDocData(
                 url=self.url_edit.text(),
                 port=self.port_edit.text(),
                 pdf_path=self.path_edit_file.text(),
                 save_path=self.path_edit_save.text(),
-                custom_prompt=custom_prompt
+                is_reply_included=self.include_reply_checkbox.isChecked(),
+                selected_template=TemplateType(self.combo.currentText()),
+                is_custom_prompt=self.custom_prompt.isChecked(),
+                custom_prompt=self.prompt.toPlainText(),
             )
+            success, e = self.viewmodel.main_handler(data)
             if not success:
                 raise RuntimeError(f"Error occured: {e}")
-
         except Exception as e:
+            print(traceback.format_exc())
             QMessageBox.critical(self, "Error", str(e))
         finally:
             self.setEnabled(True)
 
+    @pyqtSlot(UpdateDocData)
+    def _update_doc_status_list(self, doc_status: UpdateDocData):
+        if doc_status.uuid in self.viewmodel.doc_ui_map:
+            item, widget = self.viewmodel.doc_ui_map[doc_status.uuid]
+            widget: CustomListItem = widget
+
+            status, name = self.viewmodel._format_doc_status_name(
+                uuid=doc_status.uuid,
+                status=doc_status.status,
+            )
+            if doc_status.error:
+                QMessageBox.critical(self, "Error", str(doc_status.error))
+
+            if doc_status.status == "Duplicate":
+                widget.button.setEnabled(False)
+
+            elif doc_status.status == "Document Generated":
+                widget.button.setEnabled(True)
+
+            widget.status.setText(status)
+            widget.name.setText(name)
+        else:
+            self._add_doc_status_list(doc_status=doc_status)
+
+        QApplication.processEvents()
+
+    def _add_doc_status_list(self, doc_status: UpdateDocData):
+        item = QListWidgetItem()
+
+        status, name = self.viewmodel._format_doc_status_name(
+            uuid=doc_status.uuid,
+            status=doc_status.status,
+        )
+
+        custom_widget = CustomListItem(
+            status=status,
+            name=name,
+            uuid=doc_status.uuid
+        )
+        custom_widget.button.setEnabled(False)
+        
+        custom_widget.button.clicked.connect(
+            lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
+        )
+        item.setSizeHint(custom_widget.sizeHint())
+        self.list_widget.insertItem(0, item)
+        self.list_widget.setItemWidget(item, custom_widget)
+        
+        self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
+
+    def _doc_opened(self, err):
+        if err is not None:
+            QMessageBox.critical(self, "Error", str(err))
 
 def main():
     app = QApplication(sys.argv)
-    window = MainWindow(ViewModel(OrDraft()))
+    window = MainWindow(ViewModel(Data()))
 
     window.setWindowFlags(window.windowFlags())  
     window.show()

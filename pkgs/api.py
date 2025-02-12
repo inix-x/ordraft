@@ -2,13 +2,16 @@ import json
 import requests
 import pdfplumber
 import re
+import time
+import queue
 
-from PyQt6.QtCore import QThread, QThreadPool, QObject, pyqtSignal
+from PyQt6.QtCore import QThread, QThreadPool, QObject, pyqtSignal, pyqtSlot
 
 from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
-
+from .types import DocPayload, Document
 class RequestThread(QThread):
     finished = pyqtSignal(dict)
+    statusChanged = pyqtSignal(DocPayload)
 
     def __init__(self, payload, url, port, parent=None):
         super().__init__(parent)
@@ -61,8 +64,9 @@ class RequestThread(QThread):
             self.finished.emit(res)
             return res
 
-class OrDraft(QObject):
+class ModelLLM(QObject):
     data_received = pyqtSignal(dict)
+    statusChanged = pyqtSignal(DocPayload)
 
     def __init__(
         self,
@@ -83,7 +87,79 @@ class OrDraft(QObject):
     def pdf_path(self, path):
         self._pdf_path = path
 
-    def extract_text_from_pdf(self):
+    def start(self, data: Document):
+        pdf_path = data.temp_doc_data.pdf_path
+        data.doc_payload.status = "Preparing PDF"
+        self.statusChanged.emit(data.doc_payload)
+
+        pdf_text = self._extract_text_from_pdf(pdf_path)
+        payload = self._build_payload(
+            pdf_text=pdf_text, custom_prompt=data.temp_doc_data.custom_prompt
+        )
+
+        data.doc_payload.status = "Extracting Data w/ AI"
+        self.statusChanged.emit(data.doc_payload)
+        success, res = self._send_request(
+            payload=payload,
+            url=data.doc_payload.api_url,
+            port=data.doc_payload.api_port,
+        )
+        if success is False:
+            data.doc_payload.status = "API Error"
+            data.doc_payload.error_occured = res
+            self.statusChanged.emit(data.doc_payload)
+            return 
+
+        data.doc_payload.status = "Data Received"
+        self.statusChanged.emit(data.doc_payload)
+
+
+        valid_data, res = self._parse_response(res)
+        if valid_data is False:
+            self._handle_error(data=data, res=res)
+        
+        data.doc_payload.status = "Data Processed"
+        data.doc_payload.api_response = res
+        self.statusChanged.emit(data.doc_payload)
+
+    # -----Private------
+    def _handle_error(self, data: Document, res: object):
+        data.doc_payload.status = "Invalid Response"
+        data.doc_payload.api_response = res
+        self.statusChanged.emit(data.doc_payload)
+
+    def _send_request(self, payload, url, port) -> tuple[bool, object]:
+        """
+        Sends a POST request to the API endpoint with the given payload.
+
+        Parameters:
+            payload (dict): The payload to send.
+
+        Returns:
+            dict: The JSON response from the API or None if the request fails.
+        """
+        headers = {"Content-Type": "application/json"}
+        res = {}
+        succeess = True
+        try:
+            url = url.strip() if url else ""
+            port = str(port).strip() if port else ""
+            
+            url_port = f"{url}:{port}" if port else url
+            
+            this_url = f"{url_port}/v1/chat/completions" if url_port else url
+
+            response = requests.post(this_url, headers=headers, data=json.dumps(payload))
+            response.raise_for_status()  
+            res = response.json()
+        except requests.RequestException as e:
+            print(f"Error occurred during API request: {e}")
+            succeess = False
+            res = e
+        finally:
+            return succeess, res
+
+    def _extract_text_from_pdf(self, pdf_path: str):
         """
         Extracts text from the specified PDF file using pdfplumber.
 
@@ -93,7 +169,7 @@ class OrDraft(QObject):
         text = ""
         try:
             # new: Open the PDF file using pdfplumber in a context manager
-            with pdfplumber.open(self.pdf_path) as pdf:
+            with pdfplumber.open(pdf_path) as pdf:
                 # new: Iterate over each page and extract text
                 for page in pdf.pages: 
                     page_text = page.extract_text() 
@@ -104,7 +180,7 @@ class OrDraft(QObject):
             print(f"Error occurred while extracting text: {e}")  
             return None
 
-    def build_payload(self, custom_prompt: str, pdf_text: str):
+    def _build_payload(self, custom_prompt: str, pdf_text: str):
         """
         Constructs the payload to be sent to the API for extracting structured information.
 
@@ -163,8 +239,7 @@ class OrDraft(QObject):
         }
         return payload
 
-
-    def parse_response(self, response_json):
+    def _parse_response(self, response_json) -> tuple[bool, dict]:
         """
         Parses the API response to extract the JSON block with the structured information.
 
@@ -175,66 +250,80 @@ class OrDraft(QObject):
             dict: The extracted structured information or None if parsing fails.
         """
         if response_json is None:
-            return None
-        choices = response_json.get("choices", [])  # new
+            return False, {"message": "Empty"}
+        choices = response_json.get("choices", [])
         if not choices:
-            print("No choices found in the response.")  # new
-            return None
+            res = {"message":"No valid API Response found"}
+            return False, res 
 
         message = choices[0].get("message", {})  
         content = message.get("content", "")     
-        
+
         json_string_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)  
         if json_string_match:
             json_string = json_string_match.group(1)  
             try: 
                 processed = json_string.replace("\n", "")
                 result = json.loads(processed)  
-                return result  
+                return True, result  
             except json.JSONDecodeError as e:
-                print(f"Error decoding JSON: {e}")  
-                return None
+                res = {"message": f"Error decoding JSON: {e}"}
+                return False, res
         else:
-            print("JSON block not found in the response.")  
-            return None
+            return False, {"message": "JSON block not found in the response."}
 
-    def extract_information(self, url, port, custom_prompt=None):
-        """
-        High-level method to extract information from the PDF and retrieve structured data via the API.
+class ApiWorker(QObject):
+    statusChanged = pyqtSignal(DocPayload)
+    finished = pyqtSignal(bool)
 
-        Returns:
-            dict: The extracted structured information or None if any step fails.
-        """
-        pdf_text = self.extract_text_from_pdf()  
-        if not pdf_text:
-            print("Failed to extract text from PDF.")  
-            return None
-        
-        payload = self.build_payload(pdf_text=pdf_text, custom_prompt=custom_prompt)  
+    def __init__(self, llm_model: ModelLLM):
+        super().__init__()
 
-        _url = self.api_url if url is None or len(url) == 0 else url
-        _port= None if port is None or len(port) == 0 else port
+        # Private Data
+        self._task_queue = queue.Queue()
+        self._running = True
 
-        self.thread = QThread(self)  
-        self.request_thread = RequestThread(payload=payload, url=_url, port=_port)
-        self.request_thread.finished.connect(self.handle_finished)
-        self.request_thread.start()
+        # Model
+        self._llm_model = llm_model
 
-    def handle_finished(self, response_json):
-        """
-        Callback to handle the thread's finished signal.
-        """
-        if response_json is None or len(response_json) == 0:
-            print("Failed to receive valid response.")
-            self.data_received.emit({})
-            return
-        parsed = self.parse_response(response_json)
-        self.data_received.emit(parsed)
+        # Signals
+        self._llm_model.statusChanged.connect(self._handle_events)
+
+
+    # -----Public API-----
+    def add_task(self, data: DocPayload):
+        """Called to add a new task to the queue."""
+        self._task_queue.put(data)
+
+    def stop(self):
+        """Called to stop the worker loop."""
+        self._running = False
+
+    def run(self):
+        """This method runs in a separate thread and waits for tasks indefinitely."""
+        print("AI Agent Running")
+        while self._running:
+            try:
+                task_data: DocPayload = self._task_queue.get(timeout=1)
+            except queue.Empty:
+                continue
+            
+            self._llm_model.start(task_data)
+            self._task_queue.task_done()
+            time.sleep(3)
+
+        print("AI Agent Stopping")
+        self.finished.emit(True)
+
+    # -----Private API-----
+    @pyqtSlot(DocPayload)
+    def _handle_events(self, data: DocPayload):
+        self.statusChanged.emit(data)
 
 if __name__ == '__main__':
     pdf_path = "C:\\Users\\omarg\\Downloads\\NOV_CASE.pdf"  
     api_url = "http://localhost:1234/v1/chat/completions"     
-    or_draft = OrDraft()           
+    or_draft = ModelLLM()           
     or_draft.pdf_path = pdf_path
     result = or_draft.extract_information()                
     print(result)  
