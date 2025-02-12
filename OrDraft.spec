@@ -5,7 +5,12 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('templates/*', 'templates'), ('pkgs/*', 'pkgs'), ('resource/*', 'resource')],
+    datas = [
+        ('templates/*', 'templates'),
+        ('pkgs/*', 'pkgs'),
+        ('resource/*', 'resource'),
+        ('resource/icons/*', 'resource/icons')
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
