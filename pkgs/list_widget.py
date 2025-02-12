@@ -42,9 +42,9 @@ class CustomListItem(QWidget):
         self.name = QLabel(name)
         
         # icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icons/open-file.svg")
-        icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../resource/icons/open-file.svg")
+        # icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../resource/icons/open-file.svg")
         self.button = QPushButton()  
-        self.button.setIcon(QIcon(icon_filepath))
+        # self.button.setIcon(QIcon(icon_filepath))
         self.button.setIconSize(QSize(16, 16))
         self.button.setFixedSize(QSize(24,24))
 
