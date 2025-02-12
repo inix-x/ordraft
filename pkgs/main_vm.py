@@ -62,7 +62,8 @@ class ViewModel(QObject):
                 status="Queued",
                 name=os.path.basename(data.pdf_path)[0]
             )
-            self._documents.add(document)
+            self.documents.add(document)
+
             self.docEvents.emit(doc_status)
             template_file = TemplateFile.get_template_file(data.selected_template, data.is_reply_included)
             template_filepath = os.path.join(
@@ -131,7 +132,6 @@ class ViewModel(QObject):
                 status="Generating Document",
                 name=document.file_name,
             )
-            print(doc_status)
             self.docEvents.emit(doc_status)
             document = self.word_processor.draft_dismissal(api_data, document)
             doc_status = UpdateDocData(
@@ -139,7 +139,6 @@ class ViewModel(QObject):
                 status="Document Generated",
                 name=document.file_name,
             )
-            print(doc_status)
             self.docEvents.emit(doc_status)
         except Exception as e:
             doc_status = UpdateDocData(
@@ -149,6 +148,8 @@ class ViewModel(QObject):
                 error=e
             )
             self.docEvents.emit(doc_status)
+        finally:
+            self._api_worker.allow_next_task()
 
     def _duplicate(self, api_data: DocPayload):
         _running = self.documents[api_data.uuid]
@@ -166,29 +167,31 @@ class ViewModel(QObject):
             
     @pyqtSlot(DocPayload)
     def _handle_status_changed(self, api_data: DocPayload):
+        try:
+            document_data = self._documents[api_data.uuid]
+            document_data.doc_payload = api_data
+            self._documents[api_data.uuid] = document_data
 
-        document_data = self._documents[api_data.uuid]
-        document_data.doc_payload = api_data
-        self._documents[api_data.uuid] = document_data
+            doc_status = UpdateDocData(
+                uuid=document_data.uuid,
+                status=document_data.doc_payload.status,
+                name=document_data.file_name,
+            )
 
-        doc_status = UpdateDocData(
-            uuid=document_data.uuid,
-            status=document_data.doc_payload.status,
-            name=document_data.file_name,
-        )
+            # self._duplicate(api_data)
 
-        # self._duplicate(api_data)
+            if api_data.error_occured:
+                doc_status.error = api_data.error_occured
+                self.docEvents.emit(doc_status)
+                return
 
-        if api_data.error_occured:
-            doc_status.error = api_data.error_occured
-            self.docEvents.emit(doc_status)
+            if api_data.status == "Data Processed":
+                self._handle_document_generation(api_data)
+            else:
+                self.docEvents.emit(doc_status)
+        except Exception as e:
             return
-
-        if api_data.status == "Data Processed":
-            self._handle_document_generation(api_data)
-        else:
-            self.docEvents.emit(doc_status)
-
+        
     def _setup_agent(self):
         self._api_worker = ApiWorker(ModelLLM())
 

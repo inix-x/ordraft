@@ -2,10 +2,9 @@ import json
 import requests
 import pdfplumber
 import re
-import time
 import queue
 
-from PyQt6.QtCore import QThread, QThreadPool, QObject, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 
 from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
 from .types import DocPayload, Document
@@ -283,17 +282,27 @@ class ApiWorker(QObject):
         self._task_queue = queue.Queue()
         self._running = True
 
+        # ---- Control for processing tasks ----
+        # When _processing_allowed is False, the worker will wait before processing the next task.
+        self._processing_allowed = False
+        self._mutex = QMutex()
+        self._condition = QWaitCondition()
+
         # Model
         self._llm_model = llm_model
 
         # Signals
         self._llm_model.statusChanged.connect(self._handle_events)
 
-
     # -----Public API-----
     def add_task(self, data: DocPayload):
         """Called to add a new task to the queue."""
+        
+        was_empty = self._task_queue.empty()
         self._task_queue.put(data)
+        if was_empty:
+            self._auto_unlock()
+
 
     def stop(self):
         """Called to stop the worker loop."""
@@ -304,21 +313,45 @@ class ApiWorker(QObject):
         print("AI Agent Running")
         while self._running:
             try:
-                task_data: DocPayload = self._task_queue.get(timeout=1)
+                task_data = self._task_queue.get(timeout=1)
             except queue.Empty:
                 continue
-            
+
+            self._mutex.lock()
+            while not self._processing_allowed:
+                self._condition.wait(self._mutex)
+            self._processing_allowed = False
+            self._mutex.unlock()
+
             self._llm_model.start(task_data)
             self._task_queue.task_done()
-            time.sleep(3)
 
         print("AI Agent Stopping")
         self.finished.emit(True)
+
+    @pyqtSlot()
+    def allow_next_task(self):
+        """Call this slot to allow processing of the next queued task."""
+        if self._processing_allowed is False:    
+            self._mutex.lock()
+            self._processing_allowed = True
+            self._condition.wakeOne()
+            self._mutex.unlock()
 
     # -----Private API-----
     @pyqtSlot(DocPayload)
     def _handle_events(self, data: DocPayload):
         self.statusChanged.emit(data)
+
+    @pyqtSlot()
+    def _auto_unlock(self):
+        """Automatically unlock processing if the queue was empty and a new task is added."""
+        self._mutex.lock()
+        if not self._processing_allowed:
+            self._processing_allowed = True
+            self._condition.wakeOne()
+        self._mutex.unlock()
+
 
 if __name__ == '__main__':
     pdf_path = "C:\\Users\\omarg\\Downloads\\NOV_CASE.pdf"  

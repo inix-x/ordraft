@@ -124,7 +124,7 @@ class MainWindow(QMainWindow):
 
         self.viewmodel.processing_finished.connect(self._on_process_done)
         self.viewmodel.docEvents.connect(self._update_doc_status_list)
-        self.viewmodel.duplicateDetected.connect(self._duplicate)
+        # self.viewmodel.duplicateDetected.connect(self._duplicate)
         self.viewmodel.docOpened.connect(self._doc_opened)
         # Initialize path
         self.update_template(self.combo.currentText())

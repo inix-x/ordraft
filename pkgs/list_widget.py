@@ -25,9 +25,6 @@ class AutoResizeLabel(QLabel):
     
     def setText(self, text):  
         super().setText(text)  
-        metrics = QFontMetrics(self.font())  
-        text_width = metrics.horizontalAdvance(text)  
-        self.setMinimumWidth(text_width + 2)  
         self.adjustSize()
 
 class CustomListItem(QWidget):  

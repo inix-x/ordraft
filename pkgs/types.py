@@ -76,6 +76,11 @@ class DocumentsCollection:
 
     def len(self) -> int:
         return len(self._doc)
+        
+    def is_empty(self) -> bool:
+        """Returns True if the collection has no documents, otherwise False."""
+        return len(self._doc) == 0
+
 
 @dataclass
 class UpdateDocData:
