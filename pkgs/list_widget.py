@@ -1,6 +1,4 @@
 import sys  
-import os
-
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -13,7 +11,6 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QApplication,
 )
-from PyQt6.QtGui import QIcon,QFontMetrics
 from PyQt6.QtCore import QSize, Qt
 
 class AutoResizeLabel(QLabel):

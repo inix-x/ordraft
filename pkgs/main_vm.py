@@ -7,7 +7,7 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 from .api import ApiWorker, ModelLLM
 from .placeholder_replacer import WordPlaceholderReplacer
 from .types import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
-from .misc import Data, Utils
+from .misc import Data
 from .enums import TemplateFile
 
 class ViewModel(QObject):
@@ -190,6 +190,7 @@ class ViewModel(QObject):
             else:
                 self.docEvents.emit(doc_status)
         except Exception as e:
+            print(e)
             return
         
     def _setup_agent(self):
