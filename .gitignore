@@ -9,3 +9,5 @@ __pycache__/
 *$py.class
 .vscode/
 .vscode/*
+templates/
+templates/*
