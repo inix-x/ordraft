@@ -43,7 +43,7 @@ class WordPlaceholderReplacer:
 
             self._replace_placeholders(api_data.api_response)
             doc_filepath = self._save(document.temp_doc_data.save_path, case_number)
-            document.file_name = os.path.basename(doc_filepath)[0]
+            document.file_name = os.path.basename(doc_filepath).split(".")[0]
             document.save_filepath = doc_filepath
             document.doc_payload.status = "Document Generated"
         except Exception as e:

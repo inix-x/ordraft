@@ -10,12 +10,7 @@ DEFAULT_GUIDELINES = '''**GUIDELINES**
 - do not include the rule, section, laws, or penalty, only the findings from the acts consituting the violation.  
 - add "." at the end of each findings identified.
 8. `date_of_inspection` is always found immediately before violations.
-9. IGNORE THE FOLLOWING IF THEY APPEAR IN THE PDF_TEXT:  
-- "National capital region"   
-- "Philippines"  
-- "National Capital Region EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"  
-- "EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"  
-10. If a particular field (e.g., date_of_inspection) is not present in the PDF_TEXT, leave it as an empty string.  
+9. If a particular field (e.g., date_of_inspection) is not present in the PDF_TEXT, leave it as an empty string.  
 '''
 DEFAULT_INSTRUCTIONS = '''**INSTRUCTIONS**  
 1. Carefully read the entire PDF_TEXT.  
