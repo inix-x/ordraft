@@ -349,7 +349,6 @@ class MainWindow(QMainWindow):
 
         custom_widget = CustomListItem(status=status, name=name, uuid=doc_status.uuid)
         custom_widget.button.setEnabled(False)
-        resource_path = self._utils.get_app_resource(__file__)
         custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
         custom_widget.button.clicked.connect(
             lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
