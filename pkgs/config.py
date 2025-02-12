@@ -6,9 +6,9 @@ DEFAULT_GUIDELINES = '''**GUIDELINES**
 5. `location` is the address of the establishment or the recipient.  
 6. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
 7. `violations`:  
-- Identify the findings in the PDF_TEXT that pertain to violations.  
-- each violation must be COPY ONLY.
-- Do not omit critical information.  
+- list the findings in the PDF_TEXT that pertain to violations.  
+- do not include the rule, section, laws, or penalty, only the findings from the acts consituting the violation.  
+- add "." at the end of each findings identified.
 8. `date_of_inspection` is always found immediately before violations.
 9. IGNORE THE FOLLOWING IF THEY APPEAR IN THE PDF_TEXT:  
 - "National capital region"   

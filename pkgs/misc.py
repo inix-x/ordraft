@@ -22,3 +22,6 @@ class Utils:
             counter += 1
 
         return path
+    
+    def get_app_resource(self, file) -> str:
+        return os.path.join(os.path.dirname(os.path.abspath(file)), "resource")

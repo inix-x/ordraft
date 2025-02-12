@@ -17,7 +17,8 @@ from pkgs import (
     GenerateDocData,
     Data,
     UpdateDocData,
-    CustomListItem
+    CustomListItem,
+    Utils
 )
 
 class MainWindow(QMainWindow):
@@ -30,6 +31,7 @@ class MainWindow(QMainWindow):
         self.setFixedHeight(500)
         self.setFixedWidth(600)
         self.viewmodel = viewmodel
+        self._utils = Utils()
 
         self.setup_menu()
 
@@ -279,8 +281,9 @@ class MainWindow(QMainWindow):
             uuid=doc_status.uuid
         )
         custom_widget.button.setEnabled(False)
-        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/open-file.svg")
-        custom_widget.button.setIcon(QIcon(icon_path))
+        resource_path = self._utils.get_app_resource(__file__)
+        open_file = os.path.join(resource_path, "icons", "open-file.svg")
+        custom_widget.button.setIcon(QIcon(open_file))
         custom_widget.button.clicked.connect(
             lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
         )
