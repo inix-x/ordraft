@@ -1,4 +1,5 @@
 import sys
+import pathlib
 import os
 import traceback
 from functools import partial
@@ -7,7 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
                              QTextEdit, QListWidget, QListWidgetItem, QMenu)
-from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths
+from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths, QDir
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
 from pkgs import (
@@ -23,13 +24,16 @@ from pkgs import (
 
 from pkgs import SettingsViewModel, SettingsModel
 
+
 class MainWindow(QMainWindow):
     def __init__(self, viewmodel: MainViewModel):
         super().__init__()
         self.setWindowTitle("OrDraft")
-        icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
+        icon_filepath = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico"
+        )
         self.setWindowIcon(QIcon(icon_filepath))
-        self.setGeometry(100, 100, 600, 500)  
+        self.setGeometry(100, 100, 600, 500)
         self.setFixedHeight(500)
         self.setFixedWidth(600)
 
@@ -55,7 +59,7 @@ class MainWindow(QMainWindow):
         self.url_edit.setText(settings.api_url)
 
     def _setup_ui(self):
-        
+
         # Central Widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -110,7 +114,9 @@ class MainWindow(QMainWindow):
         save_layout = QHBoxLayout()
         layout.addLayout(save_layout)
         save_layout.addWidget(QLabel("Save Location:"))
-        default_save_path = os.path.join(os.path.expanduser("~"), "Documents", "OrDraft")
+        default_save_path = os.path.join(
+            os.path.expanduser("~"), "Documents", "OrDraft"
+        )
         os.makedirs(default_save_path, exist_ok=True)
         self.path_edit_save = QLineEdit()
         self.path_edit_save.setReadOnly(True)
@@ -135,7 +141,9 @@ class MainWindow(QMainWindow):
 
         # Save button
         self.generate = QPushButton("Generate")
-        layout.addWidget(self.generate, alignment=Qt.AlignmentFlag.AlignRight, stretch=1)
+        layout.addWidget(
+            self.generate, alignment=Qt.AlignmentFlag.AlignRight, stretch=1
+        )
 
         # Initialize path
         self.update_template(self.combo.currentText())
@@ -156,11 +164,13 @@ class MainWindow(QMainWindow):
 
     def setup_menu(self):
         menu_bar = self.menuBar()
-        menu_bar.setStyleSheet('border-bottom: 1px solid #30834C')
+        menu_bar.setStyleSheet("border-bottom: 1px solid #30834C")
         app_menu = menu_bar.addMenu("App")
+        app_menu.menuAction().setIconVisibleInMenu(False)
 
         # Add Menu
-        add_sub_menu = QMenu("Add")
+        add_sub_menu = QMenu("Add", self)
+        add_sub_menu.menuAction().setIconVisibleInMenu(False)
 
         # Add Menu: New template
         new_template_act = QAction("New Template", self)
@@ -170,7 +180,6 @@ class MainWindow(QMainWindow):
         # Settings
         settings_act = QAction("Settings", self)
         # settings_act.triggered.connect(self.show_settings_window)
-        
 
         # # Create an action for changing the template directory
         change_template_dir_action = QAction("Show Template folder", self)
@@ -181,18 +190,21 @@ class MainWindow(QMainWindow):
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
 
-        
         app_menu.addMenu(add_sub_menu)
         app_menu.addAction(settings_act)
         app_menu.addAction(exit_action)
         # ------------------------------------------
 
     def show_template_dir(self):
-        QMessageBox.information(self, "Reminder", '''
+        QMessageBox.information(
+            self,
+            "Reminder",
+            """
         1. Maintain the original filenames of the templates; do not rename them.
         2. Do not delete the template files.
         3. You may modify the templates, but {{placeholders}} must remain intact.
-        ''')
+        """,
+        )
         app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", "Templates")
         try:
             url = QUrl.fromLocalFile(app_data_path)
@@ -215,7 +227,11 @@ class MainWindow(QMainWindow):
 
     def handle_show_prompt(self, state: Qt.CheckState):
         # _ = self.prompt.show() if state == Qt.CheckState.Checked else self.prompt.hide()
-        _ = self.prompt.setEnabled(True) if state == Qt.CheckState.Checked else self.prompt.setEnabled(False)
+        _ = (
+            self.prompt.setEnabled(True)
+            if state == Qt.CheckState.Checked
+            else self.prompt.setEnabled(False)
+        )
 
         if state == Qt.CheckState.Checked:
             self.prompt.setText(DEFAULT_GUIDELINES)
@@ -224,8 +240,12 @@ class MainWindow(QMainWindow):
 
     def browse_directory(self, type):
         if type == 0:
-            download_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
-            file_path, _ = QFileDialog.getOpenFileName(None, "Select a File", download_dir, "All Files (*)")
+            download_dir = QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.DownloadLocation
+            )
+            file_path, _ = QFileDialog.getOpenFileName(
+                None, "Select a File", download_dir, "All Files (*)"
+            )
         else:
             directory = QFileDialog.getExistingDirectory(self, "Select Directory")
 
@@ -245,7 +265,9 @@ class MainWindow(QMainWindow):
             try:
                 os.makedirs(path, exist_ok=True)
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not create directory: {str(e)}")
+                QMessageBox.critical(
+                    self, "Error", f"Could not create directory: {str(e)}"
+                )
                 return
 
         self.process()
@@ -255,7 +277,11 @@ class MainWindow(QMainWindow):
         self.setEnabled(True)
 
         if success:
-            QMessageBox.information(self, "Success", f"Generated Document saved successfully to:\n{self.path_edit_save.text()}")
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Generated Document saved successfully to:\n{self.path_edit_save.text()}",
+            )
         else:
             QMessageBox.critical(self, "Error", "Something went wrong!")
 
@@ -292,8 +318,6 @@ class MainWindow(QMainWindow):
                 uuid=doc_status.uuid,
                 status=doc_status.status,
             )
-            if doc_status.error:
-                QMessageBox.critical(self, "Error", str(doc_status.error))
 
             if doc_status.status == "Duplicate":
                 widget.button.setEnabled(False)
@@ -303,6 +327,9 @@ class MainWindow(QMainWindow):
 
             widget.status.setText(status)
             widget.name.setText(name)
+
+            if doc_status.error:
+                QMessageBox.critical(self, "Error", str(doc_status.error))
         else:
             self._add_doc_status_list(doc_status=doc_status)
 
@@ -316,28 +343,22 @@ class MainWindow(QMainWindow):
             status=doc_status.status,
         )
 
-        custom_widget = CustomListItem(
-            status=status,
-            name=name,
-            uuid=doc_status.uuid
-        )
+        custom_widget = CustomListItem(status=status, name=name, uuid=doc_status.uuid)
         custom_widget.button.setEnabled(False)
         resource_path = self._utils.get_app_resource(__file__)
-        open_file = os.path.join(resource_path, "icons", "open-file.svg")
-        custom_widget.button.setIcon(QIcon(open_file))
+        custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
         custom_widget.button.clicked.connect(
             lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
         )
         item.setSizeHint(custom_widget.sizeHint())
         self.list_widget.insertItem(0, item)
         self.list_widget.setItemWidget(item, custom_widget)
-        
+
         self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
 
     def _doc_opened(self, err):
         if err is not None:
             QMessageBox.critical(self, "Error", str(err))
-
 
     # ----built-in-----
     def closeEvent(self, a0):
@@ -345,17 +366,31 @@ class MainWindow(QMainWindow):
         a0.accept()
         return super().closeEvent(a0)
 
+
+def register_search_path(relative_path=None):
+    relative_path = (
+        str(pathlib.Path(__file__).parent.resolve())
+        if relative_path is None
+        else relative_path
+    )
+    QDir.addSearchPath("resource", os.path.join(relative_path, "resource"))
+    QDir.addSearchPath("icons", os.path.join(relative_path, "resource", "icons"))
+
+
 def main():
     app = QApplication(sys.argv)
+    register_search_path()
+
     window = MainWindow(MainViewModel(Data()))
 
-    window.setWindowFlags(window.windowFlags())  
+    window.setWindowFlags(window.windowFlags())
     window.show()
-    window.raise_()  
-    window.activateWindow()  
+    window.raise_()
+    window.activateWindow()
 
     window.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()
