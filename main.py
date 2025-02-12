@@ -6,23 +6,25 @@ from functools import partial
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QComboBox, QPushButton, QLineEdit,
                              QFileDialog, QMessageBox, QLabel, QCheckBox,
-                             QTextEdit, QListWidget, QListWidgetItem)
+                             QTextEdit, QListWidget, QListWidgetItem, QMenu)
 from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
 from pkgs import (
     DEFAULT_GUIDELINES, 
     TemplateType, 
-    ViewModel, 
+    MainViewModel, 
     GenerateDocData,
     Data,
     UpdateDocData,
     CustomListItem,
-    Utils
+    Utils,
 )
 
+from pkgs import SettingsViewModel, SettingsModel
+
 class MainWindow(QMainWindow):
-    def __init__(self, viewmodel: ViewModel):
+    def __init__(self, viewmodel: MainViewModel):
         super().__init__()
         self.setWindowTitle("OrDraft")
         icon_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico")
@@ -30,11 +32,30 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 600, 500)  
         self.setFixedHeight(500)
         self.setFixedWidth(600)
+
+        # ViewModels
         self.viewmodel = viewmodel
+        self.settings_vm = SettingsViewModel(SettingsModel())
+
         self._utils = Utils()
 
         self.setup_menu()
+        self._setup_ui()
+        self._setup_connections()
+        self._load_settings()
 
+    def _load_settings(self):
+        # Window Properties
+        settings = self.settings_vm.settings
+
+        self.resize(settings.windowGeometry.size)
+        self.move(settings.windowGeometry.pos)
+
+        # Fields
+        self.url_edit.setText(settings.api_url)
+
+    def _setup_ui(self):
+        
         # Central Widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -53,10 +74,10 @@ class MainWindow(QMainWindow):
         self.url_edit = QLineEdit()
         network_layout.addWidget(self.url_edit)
 
-        network_layout.addWidget(QLabel("Port:"))
-        self.port_edit = QLineEdit()
-        self.port_edit.setPlaceholderText("1234")
-        network_layout.addWidget(self.port_edit)
+        # network_layout.addWidget(QLabel("Port:"))
+        # self.port_edit = QLineEdit()
+        # self.port_edit.setPlaceholderText("1234")
+        # network_layout.addWidget(self.port_edit)
 
         layout.addLayout(network_layout)
 
@@ -116,6 +137,10 @@ class MainWindow(QMainWindow):
         self.generate = QPushButton("Generate")
         layout.addWidget(self.generate, alignment=Qt.AlignmentFlag.AlignRight, stretch=1)
 
+        # Initialize path
+        self.update_template(self.combo.currentText())
+
+    def _setup_connections(self):
         # Connect signals
         self.combo.currentTextChanged.connect(self.update_template)
         self.browse_btn_file.clicked.connect(partial(self.browse_directory, 0))
@@ -128,22 +153,38 @@ class MainWindow(QMainWindow):
         self.viewmodel.docEvents.connect(self._update_doc_status_list)
         # self.viewmodel.duplicateDetected.connect(self._duplicate)
         self.viewmodel.docOpened.connect(self._doc_opened)
-        # Initialize path
-        self.update_template(self.combo.currentText())
 
     def setup_menu(self):
-        menu_bar = self.menuBar()  # QMainWindow has a built-in menu bar
-        file_menu = menu_bar.addMenu("App")
+        menu_bar = self.menuBar()
+        menu_bar.setStyleSheet('border-bottom: 1px solid #30834C')
+        app_menu = menu_bar.addMenu("App")
+
+        # Add Menu
+        add_sub_menu = QMenu("Add")
+
+        # Add Menu: New template
+        new_template_act = QAction("New Template", self)
+        # new_template_act.triggered.connect(self.show_template_window)
+        add_sub_menu.addAction(new_template_act)
+
+        # Settings
+        settings_act = QAction("Settings", self)
+        # settings_act.triggered.connect(self.show_settings_window)
+        
 
         # # Create an action for changing the template directory
         change_template_dir_action = QAction("Show Template folder", self)
         change_template_dir_action.triggered.connect(self.show_template_dir)
-        file_menu.addAction(change_template_dir_action)
+        app_menu.addAction(change_template_dir_action)
 
         # Example: Another potential action (optional)
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+
+        
+        app_menu.addMenu(add_sub_menu)
+        app_menu.addAction(settings_act)
+        app_menu.addAction(exit_action)
         # ------------------------------------------
 
     def show_template_dir(self):
@@ -224,7 +265,7 @@ class MainWindow(QMainWindow):
         try:
             data = GenerateDocData(
                 url=self.url_edit.text(),
-                port=self.port_edit.text(),
+                # port=self.port_edit.text(),
                 pdf_path=self.path_edit_file.text(),
                 save_path=self.path_edit_save.text(),
                 is_reply_included=self.include_reply_checkbox.isChecked(),
@@ -297,9 +338,16 @@ class MainWindow(QMainWindow):
         if err is not None:
             QMessageBox.critical(self, "Error", str(err))
 
+
+    # ----built-in-----
+    def closeEvent(self, a0):
+        self.settings_vm.save_window_geometry(self.size(), self.pos())
+        a0.accept()
+        return super().closeEvent(a0)
+
 def main():
     app = QApplication(sys.argv)
-    window = MainWindow(ViewModel(Data()))
+    window = MainWindow(MainViewModel(Data()))
 
     window.setWindowFlags(window.windowFlags())  
     window.show()

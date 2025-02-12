@@ -8,7 +8,7 @@ from .enums import TemplateType
 @dataclass
 class GenerateDocData:
     url: str
-    port: str | None
+    # port: str | None
     pdf_path: str
     save_path: str
     selected_template: TemplateType
@@ -34,7 +34,6 @@ class DocPayload:
     uuid: UUID
     status: str
     api_url: str | None = field(default=None)
-    api_port: str | None = field(default=None)
     api_response: dict | None = field(default=None)
     error_occured: object | None  = field(default=None)
 

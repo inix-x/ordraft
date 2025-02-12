@@ -10,7 +10,7 @@ from .types import GenerateDocData, DocPayload, DocumentsCollection, Document, U
 from .misc import Data
 from .enums import TemplateFile
 
-class ViewModel(QObject):
+class MainViewModel(QObject):
     errorOccured = pyqtSignal(str)
     taskFinished = pyqtSignal(object)
     docGenerated = pyqtSignal()
@@ -50,7 +50,6 @@ class ViewModel(QObject):
                 uuid=uuid,
                 status="Queued",
                 api_url=data.url,
-                api_port=data.port,
             )
             document = Document(
                 uuid=uuid,

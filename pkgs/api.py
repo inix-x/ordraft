@@ -8,60 +8,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition,
 
 from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
 from .types import DocPayload, Document
-class RequestThread(QThread):
-    finished = pyqtSignal(dict)
-    statusChanged = pyqtSignal(DocPayload)
 
-    def __init__(self, payload, url, port, parent=None):
-        super().__init__(parent)
-        self.payload = payload
-        self.url = url
-        self.port = port
-        self.response_json = None
-
-    def run(self):
-        """
-        Runs the request in a separate thread. The response is stored
-        in self.response_json, then the finishedSignal is emitted.
-        """
-        try:
-            self._send_request(self.payload, self.url, self.port)
-        except Exception as e:
-            print(f"Request failed: {e}")
-            self.response_json = None
-
-    def _send_request(self, payload, url, port):
-        """
-        Sends a POST request to the API endpoint with the given payload.
-
-        Parameters:
-            payload (dict): The payload to send.
-
-        Returns:
-            dict: The JSON response from the API or None if the request fails.
-        """
-        headers = {"Content-Type": "application/json"}
-        res = {}
-        try:
-            # Remove any leading/trailing spaces from the URL and port
-            url = url.strip() if url else ""
-            port = str(port).strip() if port else ""
-
-            # Build the full URL with port if available
-            url_port = f"{url}:{port}" if port else url
-
-            # Ensure the URL doesn't have unwanted spaces
-            this_url = f"{url_port}/v1/chat/completions" if url_port else url
-
-            response = requests.post(this_url, headers=headers, data=json.dumps(payload))
-            response.raise_for_status()  # Raise an error for bad HTTP responses
-            res = response.json()  # Return JSON response
-        except requests.RequestException as e:
-            # Log any errors that occur
-            print(f"Error occurred during API request: {e}")
-        finally:
-            self.finished.emit(res)
-            return res
 
 class ModelLLM(QObject):
     data_received = pyqtSignal(dict)
@@ -100,8 +47,7 @@ class ModelLLM(QObject):
         self.statusChanged.emit(data.doc_payload)
         success, res = self._send_request(
             payload=payload,
-            url=data.doc_payload.api_url,
-            port=data.doc_payload.api_port,
+            url=data.doc_payload.api_url
         )
         if success is False:
             data.doc_payload.status = "API Error"
@@ -127,7 +73,12 @@ class ModelLLM(QObject):
         data.doc_payload.api_response = res
         self.statusChanged.emit(data.doc_payload)
 
-    def _send_request(self, payload, url, port) -> tuple[bool, object]:
+    def _send_request(
+            self, 
+            payload, 
+            url
+            # port
+        ) -> tuple[bool, object]:
         """
         Sends a POST request to the API endpoint with the given payload.
 
@@ -141,12 +92,7 @@ class ModelLLM(QObject):
         res = {}
         succeess = True
         try:
-            url = url.strip() if url else ""
-            port = str(port).strip() if port else ""
-            
-            url_port = f"{url}:{port}" if port else url
-            
-            this_url = f"{url_port}/v1/chat/completions" if url_port else url
+            this_url = f"{url}/v1/chat/completions"
 
             response = requests.post(this_url, headers=headers, data=json.dumps(payload))
             response.raise_for_status()  
