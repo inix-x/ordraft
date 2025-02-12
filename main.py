@@ -165,35 +165,39 @@ class MainWindow(QMainWindow):
     def setup_menu(self):
         menu_bar = self.menuBar()
         menu_bar.setStyleSheet("border-bottom: 1px solid #30834C")
+
+        # ------------------------------------------
+        # App Menu
         app_menu = menu_bar.addMenu("App")
         app_menu.menuAction().setIconVisibleInMenu(False)
 
-        # Add Menu
+        # App Menu: Add Menu
         add_sub_menu = QMenu("Add", self)
         add_sub_menu.menuAction().setIconVisibleInMenu(False)
 
-        # Add Menu: New template
+        # App Menu: Add Menu: New template
         new_template_act = QAction("New Template", self)
         # new_template_act.triggered.connect(self.show_template_window)
         add_sub_menu.addAction(new_template_act)
 
-        # Settings
+        # App Menu: Settings
         settings_act = QAction("Settings", self)
         # settings_act.triggered.connect(self.show_settings_window)
 
-        # # Create an action for changing the template directory
-        change_template_dir_action = QAction("Show Template folder", self)
-        change_template_dir_action.triggered.connect(self.show_template_dir)
-        app_menu.addAction(change_template_dir_action)
-
-        # Example: Another potential action (optional)
+        # App Menu: exit
         exit_action = QAction("Exit", self)
         exit_action.triggered.connect(self.close)
 
         app_menu.addMenu(add_sub_menu)
         app_menu.addAction(settings_act)
         app_menu.addAction(exit_action)
+
         # ------------------------------------------
+        # Help menu
+        help_menu = menu_bar.addMenu("Help")
+        change_template_dir_action = QAction("Show Template folder", self)
+        change_template_dir_action.triggered.connect(self.show_template_dir)
+        help_menu.addAction(change_template_dir_action)
 
     def show_template_dir(self):
         QMessageBox.information(
