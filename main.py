@@ -167,7 +167,6 @@ class MainWindow(QMainWindow):
         self.open_dir.clicked.connect(self.show_dir)
         self.custom_prompt.checkStateChanged.connect(self.handle_show_prompt)
 
-        self.viewmodel.processing_finished.connect(self._on_process_done)
         self.viewmodel.docEvents.connect(self._update_doc_status_list)
         self.viewmodel.docOpened.connect(self._doc_opened)
 
@@ -294,19 +293,6 @@ class MainWindow(QMainWindow):
 
         self.process()
 
-    @pyqtSlot(bool)
-    def _on_process_done(self, success):
-        self.setEnabled(True)
-
-        if success:
-            QMessageBox.information(
-                self,
-                "Success",
-                f"Generated Document saved successfully to:\n{self.path_edit_save.text()}",
-            )
-        else:
-            QMessageBox.critical(self, "Error", "Something went wrong!")
-
     @pyqtSlot()
     def process(self):
         self.setEnabled(False)
@@ -355,13 +341,11 @@ class MainWindow(QMainWindow):
             else:
                 self._add_doc_status_list(doc_status=doc_status, id=id)
         except Exception:
-            widget.status.setText("[Error]")
+            widget.status.setText("[Error]:")
             widget.set_status_color("Error")
             widget.button.setEnabled(False)
             err = doc_status.error if doc_status.error is not None else traceback.format_exc()
             QMessageBox.critical(self, "Error", str(err))
-        finally:
-            QApplication.processEvents()
 
     def _add_doc_status_list(self, doc_status: UpdateDocData, id: str):
         try:
@@ -387,17 +371,18 @@ class MainWindow(QMainWindow):
             self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
         except Exception:
             print(traceback.format_exc())
-        finally:
-            QApplication.processEvents()
 
     @pyqtSlot(str, Any)
     def _doc_opened(self, id, err):
-        widget: CustomListItem = self.viewmodel.get_widget(id)
-        if isinstance(err, Exception):
-            widget.set_status_color("Error")
-            widget.status.setText("[File Missing]")
-            widget.button.setEnabled(False)
-            QMessageBox.critical(self, "Error", str(err))
+        try:
+            widget: CustomListItem = self.viewmodel.get_widget(id)
+            if isinstance(err, Exception):
+                widget.set_status_color("Error")
+                widget.status.setText("[File Missing]:")
+                widget.button.setEnabled(False)
+                QMessageBox.critical(self, "Error", str(err))
+        except Exception as e:
+            print(f"{e}: {traceback.format_exc()}")
 
     # ----built-in-----
     def closeEvent(self, a0):

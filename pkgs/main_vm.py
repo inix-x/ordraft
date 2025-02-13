@@ -2,6 +2,7 @@ import os
 import sys
 import traceback
 from uuid import uuid4
+from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
@@ -24,6 +25,7 @@ class MainViewModel(QObject):
     docGenerated = pyqtSignal()
     processing_finished = pyqtSignal(bool)
     updateDocStatus = pyqtSignal(Document)
+    modelProcessed = pyqtSignal(Document)
     docEvents = pyqtSignal(UpdateDocData, str)
     docOpened = pyqtSignal(str, object)
 
@@ -125,6 +127,10 @@ class MainViewModel(QObject):
     def _handle_status_changed(self, doc: Document):
         try:
             self._documents[doc.id] = doc
+            
+            path = Path(doc.save_filepath)
+            if path.is_file():
+                return
 
             doc_status = UpdateDocData(
                 id=doc.id,
@@ -137,17 +143,14 @@ class MainViewModel(QObject):
                 doc_status.status = "Error"
                 doc_status.error = doc.doc_payload.error_occured
                 self.docEvents.emit(doc_status, doc.id)
-                return
 
             if doc.doc_payload.status == "Processed":
                 self._handle_document_generation(doc)
-                return
             else:
                 self.docEvents.emit(doc_status, doc.id)
 
         except Exception as e:
-            print(e)
-            return
+            print(f"{e}: {traceback.format_exc()}")
         
     def _setup_agent(self):
         self._api_worker = ApiWorker(ModelLLM())

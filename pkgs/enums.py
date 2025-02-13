@@ -2,6 +2,7 @@ from enum import Enum
 
 class Models(Enum):
     deepseek_r1_distill_llama_8b = "lmstudio-community/deepseek-r1-distill-llama-8b"
+    # deepseek_r1_distill_qwen_1_5b = "lmstudio-community/deepseek-r1-distill-qwen-1.5b"
 
 class TemplateType(Enum):
     AIR = "air"

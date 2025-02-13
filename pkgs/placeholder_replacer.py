@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+from pathlib import Path
 from docxtpl import DocxTemplate
 
 from pkgs.dataclass import DocPayload, Document
@@ -41,6 +42,11 @@ class WordPlaceholderReplacer:
             document.doc_payload.error_occured = e
             return document
         try:
+            path = Path(document.save_filepath)
+            if path.is_file():
+                print(f"{path} is a file")
+                # return
+
             case_number: str = api_data.api_response.get("case_number")
             api_data.api_response["case_number_only"] = case_number[-9:]
 
@@ -49,7 +55,6 @@ class WordPlaceholderReplacer:
             
             document.file_name = os.path.basename(doc_filepath)
             document.save_filepath = doc_filepath
-            document.doc_payload.status = "Document Generated"
             
             return document
         except Exception as e:
