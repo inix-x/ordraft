@@ -1,3 +1,5 @@
+import os
+import sys
 import traceback
 import json
 import requests
@@ -7,8 +9,13 @@ import queue
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 
-from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
-from .types import DocPayload, Document
+if __name__ == "__main__" or "annogen" not in sys.modules:
+    sys.path.append(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+    )
+
+from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
+from pkgs.types import DocPayload, Document
 
 
 class ModelLLM(QObject):
@@ -181,7 +188,7 @@ class ModelLLM(QObject):
             ],
             "temperature": 0.8,  
             "max_tokens": -1,    
-            "stream": True      
+            "stream": False      
         }
         return payload
 

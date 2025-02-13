@@ -1,7 +1,14 @@
+import os
+import sys
 from uuid import UUID
 
 from dataclasses import dataclass, field
 
+
+if __name__ == "__main__" or "annogen" not in sys.modules:
+    sys.path.append(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+    )
 
 from .enums import TemplateType, Models
 

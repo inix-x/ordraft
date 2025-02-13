@@ -1,14 +1,21 @@
 import os
+import sys
 import traceback
 from uuid import uuid4
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+
+if __name__ == "__main__" or "annogen" not in sys.modules:
+    test = sys.path.append(
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
+    )
+    print(test)
     
-from .api import ApiWorker, ModelLLM
-from .placeholder_replacer import WordPlaceholderReplacer
-from .types import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
-from .misc import Data
-from .enums import TemplateFile
+from pkgs.api import ApiWorker, ModelLLM
+from pkgs.placeholder_replacer import WordPlaceholderReplacer
+from pkgs.types import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
+from pkgs.misc import Data
+from pkgs.enums import TemplateFile
 
 class MainViewModel(QObject):
     errorOccured = pyqtSignal(str)

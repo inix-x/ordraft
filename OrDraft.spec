@@ -7,11 +7,15 @@ a = Analysis(
     binaries=[],
     datas = [
         ('templates/*', 'templates'),
-        ('pkgs/*', 'pkgs'),
         ('resource/*', 'resource'),
         ('resource/icons/*', 'resource/icons')
     ],
-    hiddenimports=[],
+    hiddenimports=[
+        'pkgs',
+        'pkgs.handlers',
+        'pkgs.models',
+        'pkgs.views',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
