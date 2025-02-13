@@ -1,3 +1,4 @@
+import traceback
 import json
 import requests
 import pdfplumber
@@ -178,9 +179,9 @@ class ModelLLM(QObject):
                 {"role": "system", "content": "You are an assistant that extracts structured information from text."},  
                 {"role": "user", "content": user_prompt}  
             ],
-            "temperature": 0.7,  
+            "temperature": 0.8,  
             "max_tokens": -1,    
-            "stream": False      
+            "stream": True      
         }
         return payload
 
@@ -286,8 +287,11 @@ class ApiWorker(QObject):
     # -----Private API-----
     @pyqtSlot(DocPayload)
     def _handle_events(self, data: DocPayload):
-        data.validate()
-        self.statusChanged.emit(data)
+        try:
+            data.validate()
+            self.statusChanged.emit(data)
+        except Exception:
+            print(traceback.format_exc())
 
     @pyqtSlot()
     def _auto_unlock(self):
