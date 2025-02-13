@@ -11,6 +11,8 @@ a = Analysis(
         ('resource/icons/*', 'resource/icons')
     ],
     hiddenimports=[
+        'pdfplumber',
+        'docxtpl',
         'pkgs',
         'pkgs.handlers',
         'pkgs.models',
