@@ -50,14 +50,15 @@ class MainWindow(QMainWindow):
         self._load_settings()
 
     def _load_settings(self):
-        # Window Properties
-        settings = self.settings_vm.settings
-
-        self.resize(settings.windowGeometry.size)
-        self.move(settings.windowGeometry.pos)
-
-        # Fields
-        self.url_edit.setText(settings.api_url)
+        try:
+            # Window Properties
+            settings = self.settings_vm.settings
+            self.resize(settings.windowGeometry.size)
+            self.move(settings.windowGeometry.pos)
+            # Fields
+            self.url_edit.setText(settings.api_url)
+        except Exception:
+            print(traceback.format_exc())
 
     def _setup_ui(self):
 
@@ -233,12 +234,15 @@ class MainWindow(QMainWindow):
         pass
 
     def show_dir(self):
-        # Ensure the path is absolute
-        full_path = os.path.abspath(self.path_edit_save.text())
-        # Convert the file path to a QUrl
-        url = QUrl.fromLocalFile(full_path)
-        # Open the directory using QDesktopServices
-        QDesktopServices.openUrl(url)
+        try:
+            # Ensure the path is absolute
+            full_path = os.path.abspath(self.path_edit_save.text())
+            # Convert the file path to a QUrl
+            url = QUrl.fromLocalFile(full_path)
+            # Open the directory using QDesktopServices
+            QDesktopServices.openUrl(url)
+        except Exception:
+            print(traceback.format_exc())
 
     def handle_show_prompt(self, state: Qt.CheckState):
         # _ = self.prompt.show() if state == Qt.CheckState.Checked else self.prompt.hide()
@@ -254,21 +258,24 @@ class MainWindow(QMainWindow):
             self.prompt.setText("")
 
     def browse_directory(self, type):
-        if type == 0:
-            download_dir = QStandardPaths.writableLocation(
-                QStandardPaths.StandardLocation.DownloadLocation
-            )
-            file_path, _ = QFileDialog.getOpenFileName(
-                None, "Select a File", download_dir, "All Files (*)"
-            )
-        else:
-            directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+        try:
+            if type == 0:
+                download_dir = QStandardPaths.writableLocation(
+                    QStandardPaths.StandardLocation.DownloadLocation
+                )
+                file_path, _ = QFileDialog.getOpenFileName(
+                    None, "Select a File", download_dir, "All Files (*)"
+                )
+            else:
+                directory = QFileDialog.getExistingDirectory(self, "Select Directory")
 
-        if type == 0:
-            self.path_edit_file.setText(file_path)
-        elif type == 1:
-            if not (directory is None or len(directory) == 0):
-                self.path_edit_save.setText(directory)
+            if type == 0:
+                self.path_edit_file.setText(file_path)
+            elif type == 1:
+                if not (directory is None or len(directory) == 0):
+                    self.path_edit_save.setText(directory)
+        except Exception:
+            print(traceback.format_exc())
 
     def save_data(self):
         path = self.path_edit_save.text()
@@ -388,9 +395,14 @@ class MainWindow(QMainWindow):
 
     # ----built-in-----
     def closeEvent(self, a0):
-        self.settings_vm.save_window_geometry(self.size(), self.pos())
-        a0.accept()
-        return super().closeEvent(a0)
+        try:
+            self.settings_vm.save_window_geometry(self.size(), self.pos())
+            self.settings_vm.save_settings()
+            a0.accept()
+        except Exception:
+            print(traceback.format_exc())
+        finally:
+            return super().closeEvent(a0)
 
 
 def register_search_path(relative_path=None):

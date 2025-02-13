@@ -29,7 +29,8 @@ class SettingsViewModel:
 
     def save_window_geometry(self, size: QSize, pos: QPoint):
         """Save window size and position."""
-        self.model.set_window_geometry({"size": size, "pos": pos})
+        self._settings.windowGeometry.pos = pos
+        self._settings.windowGeometry.size = size
 
     def get_setting(self, key, default_value=None):
         """Fetch a user setting."""
@@ -38,3 +39,6 @@ class SettingsViewModel:
     def set_setting(self, key, value):
         """Update a user setting."""
         self.model.set_value(key, value)
+
+    def save_settings(self):
+        self.model.save_settings(settings=self._settings)
