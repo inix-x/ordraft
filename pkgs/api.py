@@ -9,13 +9,13 @@ import queue
 
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 
-if __name__ == "__main__" or "annogen" not in sys.modules:
+if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
     )
 
 from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
-from pkgs.types import DocPayload, Document
+from pkgs.dataclass import DocPayload, Document
 
 
 class ModelLLM(QObject):

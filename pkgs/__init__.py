@@ -1,9 +1,9 @@
-from .api import ApiWorker
-from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
-from .enums import TemplateFile, TemplateType, Models
-from .placeholder_replacer import WordPlaceholderReplacer
-from .main_vm import MainViewModel
-from .types import (
+from pkgs.api import ApiWorker
+from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
+from pkgs.enums import TemplateFile, TemplateType, Models
+from pkgs.placeholder_replacer import WordPlaceholderReplacer
+from pkgs.main_vm import MainViewModel
+from pkgs.dataclass import (
     GenerateDocData,
     DocPayload,
     DocumentsCollection,
@@ -11,12 +11,12 @@ from .types import (
     DataLLM,
     UpdateDocData,
 )
-from .misc import Utils, Data
-from .list_widget import CustomListItem
+from pkgs.misc import Utils, Data
+from pkgs.list_widget import CustomListItem
 
-from .handlers import SettingsViewModel
 # from .views import settings_view
-from .models import SettingsModel
+from pkgs.handlers import SettingsViewModel
+from pkgs.models import SettingsModel
 
 __all__ = [
     "Models",

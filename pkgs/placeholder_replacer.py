@@ -3,12 +3,7 @@ import sys
 import traceback
 from docxtpl import DocxTemplate
 
-if __name__ == "__main__" or "annogen" not in sys.modules:
-    test = sys.path.append(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-    )
-
-from pkgs.types import DocPayload, Document
+from pkgs.dataclass import DocPayload, Document
 from pkgs.misc import Utils
 
 class WordPlaceholderReplacer:

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
-if __name__ == "__main__" or "annogen" not in sys.modules:
+if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
     )
@@ -13,7 +13,7 @@ if __name__ == "__main__" or "annogen" not in sys.modules:
     
 from pkgs.api import ApiWorker, ModelLLM
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
-from pkgs.types import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
+from pkgs.dataclass import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
 from pkgs.misc import Data
 from pkgs.enums import TemplateFile
 

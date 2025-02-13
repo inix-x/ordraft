@@ -3,7 +3,7 @@ import sys
 
 from PyQt6.QtCore import QSize, QPoint
 
-if __name__ == "__main__" or "annogen" not in sys.modules:
+if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
     )
