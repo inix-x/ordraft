@@ -64,8 +64,8 @@ class WordPlaceholderReplacer:
         Args:
             replacements (dict): A dictionary where keys are placeholder names.
         """
-        print(type(replacements))
-        print(replacements)
+        # print(type(replacements))
+        # print(replacements)
         
         processed_replacements = {
             key: self._clean_value(value)
@@ -84,10 +84,26 @@ class WordPlaceholderReplacer:
         Returns:
             str: Cleaned and concatenated value.
         """
+        def add_period(text):
+            text = text.strip()  
+            
+            if text and not text.endswith('.'):
+                return text + '.'
+            return text
+        
         if isinstance(value, list):
-            return " ".join(item.replace("\n", "").strip() for item in value)
+            cleaned_items = []
+            for item in value:
+                
+                if not isinstance(item, str):
+                    item = str(item)
+                
+                cleaned_item = add_period(item.replace("\n", ""))
+                cleaned_items.append(cleaned_item)
+            
+            return " ".join(cleaned_items)
         elif isinstance(value, str):
-            return value.replace("\n", " ").strip()
+            return value.replace("\n", "").strip()
         return value  
 
     def _save(self, save_location, filename) -> str:
