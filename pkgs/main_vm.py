@@ -51,6 +51,7 @@ class MainViewModel(QObject):
                 status="Queued",
                 api_url=data.url,
             )
+            doc_payload.validate()
             document = Document(
                 uuid=uuid,
                 temp_doc_data=data,
@@ -125,6 +126,7 @@ class MainViewModel(QObject):
 
     def _handle_document_generation(self, api_data: DocPayload):
         try:
+            api_data.validate()
             document = self.documents[api_data.uuid]
             doc_status = UpdateDocData(
                 uuid=document.uuid,

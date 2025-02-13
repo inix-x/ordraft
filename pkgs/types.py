@@ -38,8 +38,17 @@ class DocPayload:
     error_occured: object | None  = field(default=None)
 
     def validate(self):
+        errors = []
+        if not self.uuid.strip():
+            errors.append("uuid cannot be empty.")
+        if not self.status.strip():
+            errors.append("status cannot be empty.")
+
         if self.error_occured is not None:
-            raise ValueError(f"Validation errors: {self.error_occured}")
+            errors.append(self.error_occured)
+
+        if errors:
+            raise ValueError("Validation errors: " + "; ".join(errors))
         
 @dataclass
 class Document:
@@ -80,7 +89,6 @@ class DocumentsCollection:
         """Returns True if the collection has no documents, otherwise False."""
         return len(self._doc) == 0
 
-
 @dataclass
 class UpdateDocData:
     uuid: UUID
@@ -88,6 +96,19 @@ class UpdateDocData:
     name: str
     file_path: str | None = field(default=None)
     error: object | None = field(default=None)
+
+    def validate(self):
+        errors = []
+        if not self.uuid.strip():
+            errors.append("uuid cannot be empty.")
+        if not self.status.strip():
+            errors.append("status cannot be empty.")
+
+        if self.error is not None:
+            errors.append(self.error)
+            
+        if errors:
+            raise ValueError("Validation errors: " + "; ".join(errors))
 
 @dataclass
 class DataLLM:

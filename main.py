@@ -184,6 +184,7 @@ class MainWindow(QMainWindow):
 
         # App Menu: Settings
         settings_act = QAction("Settings", self)
+        settings_act.setEnabled(False)
         # settings_act.triggered.connect(self.show_settings_window)
 
         # App Menu: exit
@@ -317,6 +318,7 @@ class MainWindow(QMainWindow):
     @pyqtSlot(UpdateDocData)
     def _update_doc_status_list(self, doc_status: UpdateDocData):
         try:
+            doc_status.validate()
             if doc_status.uuid in self.viewmodel.doc_ui_map:
                 item, widget = self.viewmodel.doc_ui_map[doc_status.uuid]
                 widget: CustomListItem = widget
@@ -346,6 +348,7 @@ class MainWindow(QMainWindow):
 
     def _add_doc_status_list(self, doc_status: UpdateDocData):
         try:
+            doc_status.validate()
             item = QListWidgetItem()
 
             status, name = self.viewmodel._format_doc_status_name(

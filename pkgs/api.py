@@ -243,7 +243,7 @@ class ApiWorker(QObject):
     # -----Public API-----
     def add_task(self, data: DocPayload):
         """Called to add a new task to the queue."""
-        
+        data.validate()
         was_empty = self._task_queue.empty()
         self._task_queue.put(data)
         if was_empty:
@@ -287,6 +287,7 @@ class ApiWorker(QObject):
     # -----Private API-----
     @pyqtSlot(DocPayload)
     def _handle_events(self, data: DocPayload):
+        data.validate()
         self.statusChanged.emit(data)
 
     @pyqtSlot()
