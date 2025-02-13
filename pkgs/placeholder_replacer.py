@@ -1,4 +1,5 @@
 import os
+import traceback
 from docxtpl import DocxTemplate
 
 from .types import DocPayload, Document
@@ -84,9 +85,12 @@ class WordPlaceholderReplacer:
 
     def _save(self, save_location, filename) -> str:
         """Saves the modified Word document to the output file."""
-        new_path = Utils.get_unique_filename(save_location, filename, "docx")
-        self._template.save(new_path)
-        return new_path
+        try:
+            new_path = Utils.get_unique_filename(save_location, filename, "docx")
+            self._template.save(new_path)
+            return new_path
+        except Exception:
+            print(traceback.format_exc())
 
 if __name__ == "__main__":
     data = {

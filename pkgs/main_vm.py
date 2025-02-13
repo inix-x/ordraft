@@ -232,19 +232,23 @@ class MainViewModel(QObject):
             self.docOpened.emit(e)
             
 
-
     def _format_doc_status_name(self, uuid, status):
-        document = self.documents[uuid]
+        try:
+            document = self.documents[uuid]
 
-        file_name = f"{document.file_name} " if document.file_name else ""
-        pdf_base = os.path.basename(document.temp_doc_data.pdf_path).split(".")[0]
-        pdf_name = pdf_base if file_name == "" else f"({self._truncate_string(pdf_base, 18)})"
-        status = f"[{status}]:"
-        name = f"{file_name}{pdf_name}"
-        return status, name
-
+            file_name = f"{document.file_name} " if document.file_name else ""
+            pdf_base = os.path.basename(document.temp_doc_data.pdf_path).split(".")[0]
+            pdf_name = pdf_base if file_name == "" else f"({self._truncate_string(pdf_base, 18)})"
+            status = f"[{status}]:"
+            name = f"{file_name}{pdf_name}"
+            return status, name
+        except Exception:
+            print(traceback.format_exc())
 
     def _truncate_string(self, text: str, max_length: int, suffix="...") -> str:
-        if len(text) > max_length:
-            return text[:max_length - len(suffix)] + suffix
-        return text
+        try:
+            if len(text) > max_length:
+                return text[:max_length - len(suffix)] + suffix
+            return text
+        except Exception:
+            print(traceback.format_exc())

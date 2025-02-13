@@ -173,11 +173,13 @@ class MainWindow(QMainWindow):
 
         # App Menu: Add Menu
         add_sub_menu = QMenu("Add", self)
+        add_sub_menu.setEnabled(False)
         add_sub_menu.menuAction().setIconVisibleInMenu(False)
 
         # App Menu: Add Menu: New template
         new_template_act = QAction("New Template", self)
         # new_template_act.triggered.connect(self.show_template_window)
+        new_template_act.setEnabled(False)
         add_sub_menu.addAction(new_template_act)
 
         # App Menu: Settings
@@ -314,50 +316,59 @@ class MainWindow(QMainWindow):
 
     @pyqtSlot(UpdateDocData)
     def _update_doc_status_list(self, doc_status: UpdateDocData):
-        if doc_status.uuid in self.viewmodel.doc_ui_map:
-            item, widget = self.viewmodel.doc_ui_map[doc_status.uuid]
-            widget: CustomListItem = widget
+        try:
+            if doc_status.uuid in self.viewmodel.doc_ui_map:
+                item, widget = self.viewmodel.doc_ui_map[doc_status.uuid]
+                widget: CustomListItem = widget
+
+                status, name = self.viewmodel._format_doc_status_name(
+                    uuid=doc_status.uuid,
+                    status=doc_status.status,
+                )
+
+                if doc_status.status == "Duplicate":
+                    widget.button.setEnabled(False)
+
+                elif doc_status.status == "Document Generated":
+                    widget.button.setEnabled(True)
+
+                widget.status.setText(status)
+                widget.name.setText(name)
+
+                if doc_status.error:
+                    QMessageBox.critical(self, "Error", str(doc_status.error))
+            else:
+                self._add_doc_status_list(doc_status=doc_status)
+        except Exception:
+            print(traceback.format_exc())
+        finally:
+            QApplication.processEvents()
+
+    def _add_doc_status_list(self, doc_status: UpdateDocData):
+        try:
+            item = QListWidgetItem()
 
             status, name = self.viewmodel._format_doc_status_name(
                 uuid=doc_status.uuid,
                 status=doc_status.status,
             )
 
-            if doc_status.status == "Duplicate":
-                widget.button.setEnabled(False)
+            custom_widget = CustomListItem(status=status, name=name, uuid=doc_status.uuid)
+            custom_widget.button.setEnabled(False)
+            custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
+            custom_widget.button.clicked.connect(
+                lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
+            )
+            item.setSizeHint(custom_widget.sizeHint())
+            self.list_widget.insertItem(0, item)
+            self.list_widget.setItemWidget(item, custom_widget)
 
-            elif doc_status.status == "Document Generated":
-                widget.button.setEnabled(True)
+            self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
+        except Exception:
+            print(traceback.format_exc())
+        finally:
+            QApplication.processEvents()
 
-            widget.status.setText(status)
-            widget.name.setText(name)
-
-            if doc_status.error:
-                QMessageBox.critical(self, "Error", str(doc_status.error))
-        else:
-            self._add_doc_status_list(doc_status=doc_status)
-
-        QApplication.processEvents()
-
-    def _add_doc_status_list(self, doc_status: UpdateDocData):
-        item = QListWidgetItem()
-
-        status, name = self.viewmodel._format_doc_status_name(
-            uuid=doc_status.uuid,
-            status=doc_status.status,
-        )
-
-        custom_widget = CustomListItem(status=status, name=name, uuid=doc_status.uuid)
-        custom_widget.button.setEnabled(False)
-        custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
-        custom_widget.button.clicked.connect(
-            lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
-        )
-        item.setSizeHint(custom_widget.sizeHint())
-        self.list_widget.insertItem(0, item)
-        self.list_widget.setItemWidget(item, custom_widget)
-
-        self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
 
     def _doc_opened(self, err):
         if err is not None:
