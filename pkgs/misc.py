@@ -22,7 +22,7 @@ class Utils:
             path = os.path.join(save_location, f"{filename}_{counter}.{extension}")
             counter += 1
 
-        return os.path.normcase(path)
+        return os.path.realpath(path)
     
     def get_app_resource(self, file) -> str:
         return os.path.join(os.path.dirname(os.path.abspath(file)), "resource")

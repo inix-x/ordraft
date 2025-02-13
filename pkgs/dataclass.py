@@ -1,6 +1,6 @@
 import os
 import sys
-from uuid import UUID
+import uuid
 
 from dataclasses import dataclass, field
 
@@ -15,15 +15,14 @@ from .enums import TemplateType, Models
 @dataclass
 class GenerateDocData:
     url: str
-    # port: str | None
     pdf_path: str
     save_path: str
     selected_template: TemplateType
     custom_prompt: str
-    model: Models = field(default=Models.deepseek_r1_distill_qwen_7b)
+    model: Models = field(default=Models.deepseek_r1_distill_llama_8b)
     is_reply_included: bool = field(default=False)
     is_custom_prompt: bool = field(default=False)
-
+    
     def validate(self):
         errors = []
         if not self.url.strip():
@@ -40,16 +39,13 @@ class GenerateDocData:
 @dataclass
 class DocPayload:
     status: str
-    uuid: UUID | None = field(default=None)
     api_url: str | None = field(default=None)
-    model: Models = field(default=Models.deepseek_r1_distill_qwen_7b)
+    model: Models = field(default=Models.deepseek_r1_distill_llama_8b)
     api_response: dict | None = field(default=None)
     error_occured: object | None  = field(default=None)
 
     def validate(self):
         errors = []
-        if self.uuid is None:
-            errors.append("uuid cannot be empty.")
         if not self.status.strip():
             errors.append("status cannot be empty.")
 
@@ -61,32 +57,55 @@ class DocPayload:
         
 @dataclass
 class Document:
-    uuid: UUID
     temp_doc_data: GenerateDocData
     doc_payload: DocPayload
+    _uuid: str = field(init=False, repr=False)  
     file_name: str | None = field(default=None)
-    save_filepath: str | None = field(default=None)
+    _save_filepath: str = field(init=False, repr=False)  
+
+    def __post_init__(self):
+        self.save_filepath = ""
+        self._uuid = str(uuid.uuid4())
+
+    @property
+    def id(self):
+        return self._uuid
+    
+    @id.setter
+    def id(self, id: str):
+        if not isinstance(id, str):
+            raise TypeError(f"ID not str, type: {type(id)}")
+
+        self._uuid = id
+
+    @property
+    def save_filepath(self):
+        return self._save_filepath
+
+    @save_filepath.setter
+    def save_filepath(self, path):
+        self._save_filepath = os.path.realpath(path)
 
 
 @dataclass
 class DocumentsCollection:
     def __init__(self, doc_data: list[Document] = []):
-        self._doc = {doc_data.uuid: doc_data for doc_data in doc_data}
+        self._doc = {doc_data.id: doc_data for doc_data in doc_data}
 
-    def __getitem__(self, uuid: UUID) -> Document:
-        return self._doc[uuid]
+    def __getitem__(self, id: str) -> Document:
+        return self._doc[id]
     
-    def __setitem__(self, uuid: UUID, doc: Document):
-        self._doc[uuid] = doc
+    def __setitem__(self, id: str, doc: Document):
+        self._doc[id] = doc
 
     def __iter__(self):
         return iter(self._doc.values())
     
     def add(self, doc: Document):
-        self._doc[doc.uuid] = doc
+        self._doc[doc.id] = doc
 
     def remove(self, doc: Document):
-        self._doc.pop(doc.uuid)
+        self._doc.pop(doc.id)
 
     def clear(self):
         self._doc.clear()
@@ -102,14 +121,14 @@ class DocumentsCollection:
 class UpdateDocData:
     status: str
     name: str
-    uuid: UUID | None = field(default=None)
+    id: str 
     file_path: str | None = field(default=None)
     error: object | None = field(default=None)
 
     def validate(self):
         errors = []
-        if self.uuid is None:
-            errors.append("uuid cannot be empty.")
+        if self.id is None:
+            errors.append("ID cannot be empty.")
         if not self.status.strip():
             errors.append("status cannot be empty.")
 
@@ -117,9 +136,13 @@ class UpdateDocData:
             errors.append(self.error)
             
         if errors:
-            raise ValueError("Validation errors: " + "; ".join(errors))
+            raise ValueError(f"Validation errors: {errors}")
 
 @dataclass
 class DataLLM:
-    model: str = field(default="deepseek-r1-distill-qwen-7b")
+    model: str = field(default=Models.deepseek_r1_distill_llama_8b)
+
+@dataclass
+class Model:
+    model:str
 

@@ -2,6 +2,7 @@ import sys
 import pathlib
 import os
 import traceback
+from typing import Any
 from functools import partial
 
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
@@ -168,7 +169,6 @@ class MainWindow(QMainWindow):
 
         self.viewmodel.processing_finished.connect(self._on_process_done)
         self.viewmodel.docEvents.connect(self._update_doc_status_list)
-        # self.viewmodel.duplicateDetected.connect(self._duplicate)
         self.viewmodel.docOpened.connect(self._doc_opened)
 
     def setup_menu(self):
@@ -264,7 +264,7 @@ class MainWindow(QMainWindow):
                     QStandardPaths.StandardLocation.DownloadLocation
                 )
                 file_path, _ = QFileDialog.getOpenFileName(
-                    None, "Select a File", download_dir, "All Files (*)"
+                    None, "Select a File", download_dir, "*.pdf"
                 )
             else:
                 directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -331,23 +331,18 @@ class MainWindow(QMainWindow):
         finally:
             self.setEnabled(True)
 
-    @pyqtSlot(UpdateDocData)
-    def _update_doc_status_list(self, doc_status: UpdateDocData):
+    @pyqtSlot(UpdateDocData, str)
+    def _update_doc_status_list(self, doc_status: UpdateDocData, id: str):
+        widget: CustomListItem = self.viewmodel.get_widget(id)
         try:
             doc_status.validate()
-            if doc_status.uuid in self.viewmodel.doc_ui_map:
-                item, widget = self.viewmodel.doc_ui_map[doc_status.uuid]
-                widget: CustomListItem = widget
-
+            if widget is not None:
                 status, name = self.viewmodel._format_doc_status_name(
-                    uuid=doc_status.uuid,
+                    id=id,
                     status=doc_status.status,
                 )
-
-                if doc_status.status == "Duplicate":
-                    widget.button.setEnabled(False)
-
-                elif doc_status.status == "Document Generated":
+                widget.set_status_color("Normal")
+                if doc_status.status == "Done":
                     widget.button.setEnabled(True)
 
                 widget.status.setText(status)
@@ -355,28 +350,35 @@ class MainWindow(QMainWindow):
 
                 if doc_status.error:
                     QMessageBox.critical(self, "Error", str(doc_status.error))
+                    widget.set_status_color("Error")
+                    raise RuntimeError(f"{doc_status.error}")
             else:
-                self._add_doc_status_list(doc_status=doc_status)
+                self._add_doc_status_list(doc_status=doc_status, id=id)
         except Exception:
-            print(traceback.format_exc())
+            widget.status.setText("[Error]")
+            widget.set_status_color("Error")
+            widget.button.setEnabled(False)
+            err = doc_status.error if doc_status.error is not None else traceback.format_exc()
+            QMessageBox.critical(self, "Error", str(err))
         finally:
             QApplication.processEvents()
 
-    def _add_doc_status_list(self, doc_status: UpdateDocData):
+    def _add_doc_status_list(self, doc_status: UpdateDocData, id: str):
         try:
             doc_status.validate()
             item = QListWidgetItem()
 
             status, name = self.viewmodel._format_doc_status_name(
-                uuid=doc_status.uuid,
+                id=id,
                 status=doc_status.status,
             )
 
-            custom_widget = CustomListItem(status=status, name=name, uuid=doc_status.uuid)
+            custom_widget = CustomListItem(status=status, name=name, id=id)
+            custom_widget.set_status_color("Waiting")
             custom_widget.button.setEnabled(False)
             custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
             custom_widget.button.clicked.connect(
-                lambda checked, uuid=doc_status.uuid: self.viewmodel.open_document(uuid)
+                lambda checked, id=id: self.viewmodel.open_document(id)
             )
             item.setSizeHint(custom_widget.sizeHint())
             self.list_widget.insertItem(0, item)
@@ -388,9 +390,13 @@ class MainWindow(QMainWindow):
         finally:
             QApplication.processEvents()
 
-
-    def _doc_opened(self, err):
-        if err is not None:
+    @pyqtSlot(str, Any)
+    def _doc_opened(self, id, err):
+        widget: CustomListItem = self.viewmodel.get_widget(id)
+        if isinstance(err, Exception):
+            widget.set_status_color("Error")
+            widget.status.setText("[File Missing]")
+            widget.button.setEnabled(False)
             QMessageBox.critical(self, "Error", str(err))
 
     # ----built-in-----

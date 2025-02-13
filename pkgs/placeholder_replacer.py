@@ -33,25 +33,28 @@ class WordPlaceholderReplacer:
         self._template_file = path
         self._template = DocxTemplate(path)
 
-    def draft_dismissal(self, api_data: DocPayload, document: Document) -> Document:
+    def draft_dismissal(self, document: Document) -> Document:
         try:
-            api_data.validate()
-        except ValueError as ve:
-            document.doc_payload.error_occured = ve
-            return
+            document.doc_payload.validate()
+            api_data = document.doc_payload
+        except Exception as e:
+            document.doc_payload.error_occured = e
+            return document
         try:
             case_number: str = api_data.api_response.get("case_number")
             api_data.api_response["case_number_only"] = case_number[-9:]
 
             self._replace_placeholders(api_data.api_response)
             doc_filepath = self._save(document.temp_doc_data.save_path, case_number)
+            
             document.file_name = os.path.basename(doc_filepath)
             document.save_filepath = doc_filepath
             document.doc_payload.status = "Document Generated"
+            
+            return document
         except Exception as e:
-            document.doc_payload.status = "Error Occured"
+            document.doc_payload.status = "Error"
             document.doc_payload.error_occured = e
-        finally:
             return document
 
     def _replace_placeholders(self, replacements):
@@ -61,6 +64,9 @@ class WordPlaceholderReplacer:
         Args:
             replacements (dict): A dictionary where keys are placeholder names.
         """
+        print(type(replacements))
+        print(replacements)
+        
         processed_replacements = {
             key: self._clean_value(value)
             for key, value in replacements.items()
@@ -79,7 +85,7 @@ class WordPlaceholderReplacer:
             str: Cleaned and concatenated value.
         """
         if isinstance(value, list):
-            return " ".join(item.replace("\n", " ").strip() for item in value)
+            return " ".join(item.replace("\n", "").strip() for item in value)
         elif isinstance(value, str):
             return value.replace("\n", " ").strip()
         return value  

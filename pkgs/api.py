@@ -10,9 +10,7 @@ import queue
 from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
-    sys.path.append(
-        os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
-    )
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
 from pkgs.dataclass import DocPayload, Document
@@ -20,18 +18,18 @@ from pkgs.dataclass import DocPayload, Document
 
 class ModelLLM(QObject):
     data_received = pyqtSignal(dict)
-    statusChanged = pyqtSignal(DocPayload)
+    statusChanged = pyqtSignal(Document)
 
     def __init__(
         self,
         api_url="http://localhost:1234",
         model="deepseek-r1-distill-qwen-7b",
     ):
-        super().__init__()  
+        super().__init__()
 
-        self._pdf_path = None 
+        self._pdf_path = None
         self.api_url = api_url
-        self.model = model       
+        self.model = model
 
     @property
     def pdf_path(self):
@@ -44,49 +42,49 @@ class ModelLLM(QObject):
     def start(self, data: Document):
         pdf_path = data.temp_doc_data.pdf_path
         data.doc_payload.status = "Preparing PDF"
-        self.statusChanged.emit(data.doc_payload)
+        self.statusChanged.emit(data)
 
         pdf_text = self._extract_text_from_pdf(pdf_path)
         payload = self._build_payload(
-            pdf_text=pdf_text, custom_prompt=data.temp_doc_data.custom_prompt, model=data.doc_payload.model
+            pdf_text=pdf_text,
+            custom_prompt=data.temp_doc_data.custom_prompt,
+            model=data.doc_payload.model,
         )
 
-        data.doc_payload.status = "Extracting Data w/ AI"
-        self.statusChanged.emit(data.doc_payload)
-        success, res = self._send_request(
-            payload=payload,
-            url=data.doc_payload.api_url
-        )
+        data.doc_payload.status = "Analyzing"
+        self.statusChanged.emit(data)
+        success, res = self._send_request(payload=payload, url=data.doc_payload.api_url)
         if success is False:
             data.doc_payload.status = "API Error"
             data.doc_payload.error_occured = res
-            self.statusChanged.emit(data.doc_payload)
-            return 
+            self.statusChanged.emit(data)
+            return
 
-        data.doc_payload.status = "Data Received"
-        self.statusChanged.emit(data.doc_payload)
-
+        data.doc_payload.status = "Processing"
+        self.statusChanged.emit(data)
 
         valid_data, res = self._parse_response(res)
         if valid_data is False:
             self._handle_error(data=data, res=res)
-        
-        data.doc_payload.status = "Data Processed"
+            return
+
+        data.doc_payload.status = "Processed"
         data.doc_payload.api_response = res
-        self.statusChanged.emit(data.doc_payload)
+        self.statusChanged.emit(data)
 
     # -----Private------
-    def _handle_error(self, data: Document, res: object):
+    def _handle_error(self, data: Document, res):
         data.doc_payload.status = "Invalid Response"
         data.doc_payload.api_response = res
-        self.statusChanged.emit(data.doc_payload)
+        data.doc_payload.error_occured = ValueError(f"Invalid response: {traceback.format_exc()}")
+        self.statusChanged.emit(data)
 
     def _send_request(
-            self, 
-            payload, 
-            url
-            # port
-        ) -> tuple[bool, object]:
+        self,
+        payload,
+        url,
+        # port
+    ) -> tuple[bool, object]:
         """
         Sends a POST request to the API endpoint with the given payload.
 
@@ -102,8 +100,10 @@ class ModelLLM(QObject):
         try:
             this_url = f"{url}/v1/chat/completions"
 
-            response = requests.post(this_url, headers=headers, data=json.dumps(payload))
-            response.raise_for_status()  
+            response = requests.post(
+                this_url, headers=headers, data=json.dumps(payload), timeout=300
+            )
+            response.raise_for_status()
             res = response.json()
         except requests.RequestException as e:
             print(f"Error occurred during API request: {e}")
@@ -124,13 +124,13 @@ class ModelLLM(QObject):
             # new: Open the PDF file using pdfplumber in a context manager
             with pdfplumber.open(pdf_path) as pdf:
                 # new: Iterate over each page and extract text
-                for page in pdf.pages: 
-                    page_text = page.extract_text() 
+                for page in pdf.pages:
+                    page_text = page.extract_text()
                     if page_text:
-                        text += page_text + "\n" 
+                        text += page_text + "\n"
             return text
         except Exception as e:
-            print(f"Error occurred while extracting text: {e}")  
+            print(f"Error occurred while extracting text: {e}")
             return None
 
     def _build_payload(self, custom_prompt: str, pdf_text: str, model: str):
@@ -144,7 +144,7 @@ class ModelLLM(QObject):
             dict: The JSON payload.
         """
         # new: Define the JSON template for the extracted information
-        template = '''
+        template = """
         {
             "client_name": "",
             "location": "",
@@ -157,14 +157,14 @@ class ModelLLM(QObject):
             ]
             }
         }
-        '''
+        """
         prompt = custom_prompt if custom_prompt else DEFAULT_GUIDELINES
 
-        prompt = f'''
+        prompt = f"""
             {prompt}
 
             {DEFAULT_INSTRUCTIONS}
-        '''
+        """
         # new: Build the user prompt by embedding the template and guidelines along with the PDF text.
         user_prompt = f"""
             **TASK**  
@@ -181,14 +181,17 @@ class ModelLLM(QObject):
         """
         # new: Construct the payload with the defined model and prompt
         payload = {
-            "model": model,  
-            "messages": [         
-                {"role": "system", "content": "You are an assistant that extracts structured information from text."},  
-                {"role": "user", "content": user_prompt}  
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an assistant that extracts structured information from text.",
+                },
+                {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.8,  
-            "max_tokens": -1,    
-            "stream": False      
+            "temperature": 0.8,
+            "max_tokens": -1,
+            "stream": False,
         }
         return payload
 
@@ -206,27 +209,32 @@ class ModelLLM(QObject):
             return False, {"message": "Empty"}
         choices = response_json.get("choices", [])
         if not choices:
-            res = {"message":"No valid API Response found"}
-            return False, res 
+            res = {"message": "No valid API Response found"}
+            return False, res
 
-        message = choices[0].get("message", {})  
-        content = message.get("content", "")     
+        message = choices[0].get("message", {})
+        content = message.get("content", "")
 
-        json_string_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)  
+        json_string_match = re.search(r"```json\n(.*?)\n```", content, re.DOTALL)
         if json_string_match:
-            json_string = json_string_match.group(1)  
-            try: 
+            json_string = json_string_match.group(1)
+            try:
                 processed = json_string.replace("\n", "")
-                result = json.loads(processed)  
-                return True, result  
+                result = json.loads(processed)
+
+                if not isinstance(result, (dict, json)):
+                    raise TypeError(f"Not a valid response: response is {type(result)}")
+                
+                return True, result
             except json.JSONDecodeError as e:
                 res = {"message": f"Error decoding JSON: {e}"}
                 return False, res
         else:
             return False, {"message": "JSON block not found in the response."}
 
+
 class ApiWorker(QObject):
-    statusChanged = pyqtSignal(DocPayload)
+    statusChanged = pyqtSignal(Document)
     finished = pyqtSignal(bool)
 
     def __init__(self, llm_model: ModelLLM):
@@ -256,7 +264,6 @@ class ApiWorker(QObject):
         if was_empty:
             self._auto_unlock()
 
-
     def stop(self):
         """Called to stop the worker loop."""
         self._running = False
@@ -266,7 +273,7 @@ class ApiWorker(QObject):
         print("AI Agent Running")
         while self._running:
             try:
-                task_data = self._task_queue.get(timeout=1)
+                task_data: Document = self._task_queue.get(timeout=1)
             except queue.Empty:
                 continue
 
@@ -285,17 +292,16 @@ class ApiWorker(QObject):
     @pyqtSlot()
     def allow_next_task(self):
         """Call this slot to allow processing of the next queued task."""
-        if self._processing_allowed is False:    
+        if self._processing_allowed is False:
             self._mutex.lock()
             self._processing_allowed = True
             self._condition.wakeOne()
             self._mutex.unlock()
 
     # -----Private API-----
-    @pyqtSlot(DocPayload)
-    def _handle_events(self, data: DocPayload):
+    @pyqtSlot(Document)
+    def _handle_events(self, data: Document):
         try:
-            data.validate()
             self.statusChanged.emit(data)
         except Exception:
             print(traceback.format_exc())
@@ -310,10 +316,10 @@ class ApiWorker(QObject):
         self._mutex.unlock()
 
 
-if __name__ == '__main__':
-    pdf_path = "C:\\Users\\omarg\\Downloads\\NOV_CASE.pdf"  
-    api_url = "http://localhost:1234/v1/chat/completions"     
-    or_draft = ModelLLM()           
+if __name__ == "__main__":
+    pdf_path = "C:\\Users\\omarg\\Downloads\\NOV_CASE.pdf"
+    api_url = "http://localhost:1234/v1/chat/completions"
+    or_draft = ModelLLM()
     or_draft.pdf_path = pdf_path
-    result = or_draft.extract_information()                
-    print(result)  
+    result = or_draft.extract_information()
+    print(result)

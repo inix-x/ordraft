@@ -25,10 +25,10 @@ class AutoResizeLabel(QLabel):
         self.adjustSize()
 
 class CustomListItem(QWidget):  
-    def __init__(self, status, name, parent=None, uuid=None):  
+    def __init__(self, status, name, parent=None, id=None):  
         super().__init__(parent)  
         
-        self._uuid = uuid
+        self._uuid = id
 
         layout = QHBoxLayout(self)
         
@@ -52,6 +52,16 @@ class CustomListItem(QWidget):
     @property
     def id(self):
         return self._uuid
+    
+    def set_status_color(self, state:str = "Normal"):
+        if state == "Error":
+            self.status.setStyleSheet("color: #CC144A;")
+        elif state == "Normal":
+            self.status.setStyleSheet("color: #63FF9A;")
+        elif state == "Waiting":
+            self.status.setStyleSheet("color: #FF9A63;")
+        
+
 
 class MainWindow(QMainWindow):  
     def __init__(self):  
