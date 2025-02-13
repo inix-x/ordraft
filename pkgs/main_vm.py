@@ -50,6 +50,7 @@ class MainViewModel(QObject):
                 uuid=uuid,
                 status="Queued",
                 api_url=data.url,
+                model=data.model
             )
             doc_payload.validate()
             document = Document(

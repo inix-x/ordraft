@@ -40,7 +40,7 @@ class ModelLLM(QObject):
 
         pdf_text = self._extract_text_from_pdf(pdf_path)
         payload = self._build_payload(
-            pdf_text=pdf_text, custom_prompt=data.temp_doc_data.custom_prompt
+            pdf_text=pdf_text, custom_prompt=data.temp_doc_data.custom_prompt, model=data.doc_payload.model
         )
 
         data.doc_payload.status = "Extracting Data w/ AI"
@@ -125,7 +125,7 @@ class ModelLLM(QObject):
             print(f"Error occurred while extracting text: {e}")  
             return None
 
-    def _build_payload(self, custom_prompt: str, pdf_text: str):
+    def _build_payload(self, custom_prompt: str, pdf_text: str, model: str):
         """
         Constructs the payload to be sent to the API for extracting structured information.
 
@@ -173,7 +173,7 @@ class ModelLLM(QObject):
         """
         # new: Construct the payload with the defined model and prompt
         payload = {
-            "model": self.model,  
+            "model": model,  
             "messages": [         
                 {"role": "system", "content": "You are an assistant that extracts structured information from text."},  
                 {"role": "user", "content": user_prompt}  
@@ -241,9 +241,8 @@ class ApiWorker(QObject):
         self._llm_model.statusChanged.connect(self._handle_events)
 
     # -----Public API-----
-    def add_task(self, data: DocPayload):
+    def add_task(self, data: Document):
         """Called to add a new task to the queue."""
-        data.validate()
         was_empty = self._task_queue.empty()
         self._task_queue.put(data)
         if was_empty:

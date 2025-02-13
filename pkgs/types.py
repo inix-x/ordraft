@@ -3,7 +3,7 @@ from uuid import UUID
 from dataclasses import dataclass, field
 
 
-from .enums import TemplateType
+from .enums import TemplateType, Models
 
 @dataclass
 class GenerateDocData:
@@ -13,6 +13,7 @@ class GenerateDocData:
     save_path: str
     selected_template: TemplateType
     custom_prompt: str
+    model: Models = field(default=Models.deepseek_r1_distill_qwen_7b)
     is_reply_included: bool = field(default=False)
     is_custom_prompt: bool = field(default=False)
 
@@ -31,15 +32,16 @@ class GenerateDocData:
 
 @dataclass
 class DocPayload:
-    uuid: UUID
     status: str
+    uuid: UUID | None = field(default=None)
     api_url: str | None = field(default=None)
+    model: Models = field(default=Models.deepseek_r1_distill_qwen_7b)
     api_response: dict | None = field(default=None)
     error_occured: object | None  = field(default=None)
 
     def validate(self):
         errors = []
-        if not self.uuid.strip():
+        if self.uuid is None:
             errors.append("uuid cannot be empty.")
         if not self.status.strip():
             errors.append("status cannot be empty.")
@@ -91,15 +93,15 @@ class DocumentsCollection:
 
 @dataclass
 class UpdateDocData:
-    uuid: UUID
     status: str
     name: str
+    uuid: UUID | None = field(default=None)
     file_path: str | None = field(default=None)
     error: object | None = field(default=None)
 
     def validate(self):
         errors = []
-        if not self.uuid.strip():
+        if self.uuid is None:
             errors.append("uuid cannot be empty.")
         if not self.status.strip():
             errors.append("status cannot be empty.")

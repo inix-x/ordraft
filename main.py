@@ -20,6 +20,7 @@ from pkgs import (
     UpdateDocData,
     CustomListItem,
     Utils,
+    Models
 )
 
 from pkgs import SettingsViewModel, SettingsModel
@@ -78,12 +79,19 @@ class MainWindow(QMainWindow):
         self.url_edit = QLineEdit()
         network_layout.addWidget(self.url_edit)
 
+        model_layout = QHBoxLayout()
+        model_layout.addWidget(QLabel("Assistant:"))
+        self.assisant = QComboBox()
+        self.assisant.addItems([template.value for template in Models])
+        model_layout.addWidget(self.assisant, stretch=1)
+
         # network_layout.addWidget(QLabel("Port:"))
         # self.port_edit = QLineEdit()
         # self.port_edit.setPlaceholderText("1234")
         # network_layout.addWidget(self.port_edit)
 
         layout.addLayout(network_layout)
+        layout.addLayout(model_layout)
 
         # Combo box setup
         template_layout = QHBoxLayout()
@@ -305,6 +313,7 @@ class MainWindow(QMainWindow):
                 selected_template=TemplateType(self.combo.currentText()),
                 is_custom_prompt=self.custom_prompt.isChecked(),
                 custom_prompt=self.prompt.toPlainText(),
+                model=self.assisant.currentText()
             )
             success, e = self.viewmodel.main_handler(data)
             if not success:

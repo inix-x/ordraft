@@ -1,6 +1,6 @@
 from .api import ApiWorker
 from .config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
-from .enums import TemplateFile, TemplateType
+from .enums import TemplateFile, TemplateType, Models
 from .placeholder_replacer import WordPlaceholderReplacer
 from .main_vm import MainViewModel
 from .types import (
@@ -19,6 +19,7 @@ from .handlers import SettingsViewModel
 from .models import SettingsModel
 
 __all__ = [
+    "Models",
     "SettingsViewModel",
     "SettingsModel",
     "DEFAULT_GUIDELINES",
