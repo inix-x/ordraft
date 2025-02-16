@@ -411,6 +411,14 @@ class Window(FluentWindow):
             data=URL,
             parent=self,
         )
+        self.template_dir = CustomPushSettingCard(
+            text="Show",
+            icon=FIF.FOLDER,
+            title="Template Location",
+            content="You may edit here the existing templates.",
+            data=URL,
+            parent=self,
+        )
 
         # UI: Aesthetics
         aesthetics = SubtitleLabel("Aesthetics", self)
@@ -434,6 +442,7 @@ class Window(FluentWindow):
 
         # Connections: App
         self.api_url.button.clicked.connect(self._show_change_api_url)
+        self.template_dir.button.clicked.connect(self.show_template_dir)
 
         # Connections: Aeshethics
         dark_theme.switchButton.checkedChanged.connect(
@@ -448,6 +457,9 @@ class Window(FluentWindow):
         )
         self.settings_interface.vBoxlayout.addWidget(
             self.api_url, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
         )
         # layout: Aesthetics
         self.settings_interface.vBoxlayout.addWidget(
@@ -666,6 +678,24 @@ class Window(FluentWindow):
 
         if self.message_box.exec():
             pass
+
+    def show_template_dir(self):
+        self.show_message_box(
+            "Reminder",
+            """
+            1. Maintain the original filenames of the templates; do not rename them.
+            2. Do not delete the template files.
+            3. You may modify the templates, but {{placeholders}} must remain intact.
+            """,
+        )
+        app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", "Templates")
+        try:
+            url = QUrl.fromLocalFile(app_data_path)
+        except Exception as e:
+            print(e)
+            os.makedirs(app_data_path, exist_ok=True)
+        finally:
+            QDesktopServices.openUrl(url)
 
     def generate(self):
         if self.scan_stop_btn.data == "scanning":

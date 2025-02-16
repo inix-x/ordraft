@@ -245,16 +245,16 @@ class MainViewModel(QObject):
         """Stop the worker and wait for the thread to finish."""
         self._api_worker.stop()
         self._api_worker_thread.quit()
-        self._api_worker_thread.wait()
+        # self._api_worker_thread.wait()
 
         
         self._cloud_llm_worker.stop()
         self._cloud_llm_worker_thread.quit()
-        self._cloud_llm_worker_thread.wait()
+        # self._cloud_llm_worker_thread.wait()
 
         self._llm_state_bgw.stop()
         self._llm_state_bgw_thread.quit()
-        self._llm_state_bgw_thread.wait()
+        # self._llm_state_bgw_thread.wait()
 
     def setup_background_worker(self):
         self._llm_state_bgw_thread = QThread()
