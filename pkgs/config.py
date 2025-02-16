@@ -11,6 +11,7 @@ DEFAULT_GUIDELINES = '''
 - list the findings in the PDF_TEXT that pertain to violations.  
 - do not include the rule, section, laws, or penalty, only the findings from the acts consituting the violation.  
 - add "." at the end of each findings identified.
+- Be brief, and precise with the findings that will be placed on 'violations'.
 5. `date_of_inspection` is always found immediately before violations.
 6. If a particular field (e.g., date_of_inspection) is not present in the PDF_TEXT, leave it as an empty string.  
 '''
@@ -28,6 +29,7 @@ SYSTEM_PROMPT ='''You are a **professional-level legal assistant**. Your task is
 2. **Data Extraction Rules**  
 - **Only extract and/or copy the findings, and/or cause of violations.**
 - **DO NOT OMIT any law, rules, RA, or constitution.**
+- **Keep Each values in violation clear, and concise.**
 - **Ignore** the following text if it appears in the PDF_TEXT:  
     ```
     "National capital region",

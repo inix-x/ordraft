@@ -275,7 +275,7 @@ class ApiWorker(QObject):
 
     def run(self):
         """This method runs in a separate thread and waits for tasks indefinitely."""
-        print("AI Agent Running")
+        print("\nAgent 1 Running")
         while self._running:
             try:
                 task_data: Document = self._task_queue.get(timeout=1)
@@ -291,7 +291,7 @@ class ApiWorker(QObject):
             self._llm_model.start(task_data)
             self._task_queue.task_done()
 
-        print("AI Agent Stopping")
+        print("Agent 1 Stopping")
         self.finished.emit(True)
 
     @pyqtSlot()

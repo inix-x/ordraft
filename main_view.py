@@ -11,13 +11,13 @@ from typing import Union
 
 from PyQt6.QtCore import (
     Qt, QObject, QDir, Qt, QUrl,
-    QPropertyAnimation, pyqtSignal, QStandardPaths, QSize,
+    QPropertyAnimation, QStandardPaths, QSize, pyqtSlot
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout,
     QHBoxLayout, QWidget, QSplitter,
     QListWidget, QSplitterHandle, QGraphicsOpacityEffect,
-    QSizePolicy, QFileDialog, QLabel,
+    QSizePolicy, QFileDialog, QLabel, QSpacerItem
 )
 from PyQt6.QtGui import QIcon, QColor, QPainter, QPainterPath, QDesktopServices
 
@@ -50,7 +50,7 @@ from pkgs import (
     Utils, Models,
 )
 
-from pkgs import SettingsViewModel, SettingsModel
+from pkgs import SettingsViewModel, SettingsModel, StateLLM
 # fmt: on
 
 
@@ -294,11 +294,11 @@ class AIStreamCard(CardWidget):
 
         self._hover = False
 
-        self.outputWidget = PlainTextEdit(self)
-        self.outputWidget.setReadOnly(True)
-        self.outputWidget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.chatbox = PlainTextEdit(self)
+        self.chatbox.setReadOnly(True)
+        self.chatbox.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.outputWidget)
+        layout.addWidget(self.chatbox)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
 
@@ -319,7 +319,7 @@ class AIStreamCard(CardWidget):
         Append new text to the streaming output.
         This method can be called repeatedly to update the card.
         """
-        self.outputWidget.append(text)
+        self.chatbox.append(text)
 
 
 class Window(FluentWindow):
@@ -333,9 +333,14 @@ class Window(FluentWindow):
         self.dismissal_interface = Widget("Dismissal", self)
         self.settings_interface = Widget("Settings", self)
 
+        # Dependencies
         self.view_model = MainViewModel(Data())
 
+        # Dependencies Connections
         self.view_model.docEvents.connect(self.generate_events)
+        self.view_model.chatbox_update.connect(self.update_chatbox)
+        self.view_model.llm_state_changed.connect(self.update_assistant_status)
+        self.view_model.llm_stream_finished.connect(self._finished)
 
         self.initNavigation()
         self.initWindow()
@@ -512,12 +517,12 @@ class Window(FluentWindow):
         self.line_edit_message_box = LineEditMessageBox(self)
 
     def dismissal_setup_ui(self):
-        self.streamCard = AIStreamCard()
-        self.streamCard.setFixedWidth(725)
-        self.streamCard.setMinimumWidth(725)
-        self.streamCard.setFixedHeight(350)
+        self.stream_card = AIStreamCard()
+        self.stream_card.setFixedWidth(725)
+        self.stream_card.setMinimumWidth(725)
+        self.stream_card.setFixedHeight(350)
 
-        self.streamCard.setSizePolicy(
+        self.stream_card.setSizePolicy(
             QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
         )
 
@@ -529,28 +534,39 @@ class Window(FluentWindow):
         template_control.setContentsMargins(0, 20, 0, 0)
 
         self.file_button = PushButtonData(FIF.ADD_TO, "Add new file")
-        self.file_button.setFixedWidth(400)
+        self.file_button.setFixedWidth(275)
 
         self.save_location_btn = PushButtonData(FIF.FOLDER_ADD, "Save location")
+        self.save_location_btn.setFixedWidth(150)
+    
         self.open_save_location_btn = PushButton(FIF.FOLDER, "Open Generated Documents")
+        self.open_save_location_btn.setFixedWidth(225)
 
-        self.generate_btn = PushButtonData(QIcon("icons:bot.icon.svg"), "Generate")
-        self.generate_btn.setFixedWidth(120)
+        self.scan_stop_btn = PushButtonData(QIcon("icons:bot.icon.svg"), "Scan PDF")
+        self.scan_stop_btn.setFixedWidth(125)
 
+        self.generate_doc_btn = PushButton(CFIF.NEW_FILE, "Generate")
+        self.generate_doc_btn.setFixedWidth(125)
+        self.generate_doc_btn.setEnabled(False)
+
+        
         # Template
         self.template_combobox = ComboBox()
-        self.template_combobox.setFixedWidth(175)
+        self.template_combobox.setFixedWidth(150)
         self.template_combobox.addItems([template.value for template in TemplateType])
         self.template_combobox.setPlaceholderText("Choose template")
         self.template_combobox.setCurrentIndex(-1)
 
         self.include_reply = CheckBox("Include Reply")
 
+        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
         # Connections
         self.file_button.clicked.connect(partial(self._browse, 0))
         self.save_location_btn.clicked.connect(partial(self._browse, 1))
         self.open_save_location_btn.clicked.connect(self._open_save_location)
-        self.generate_btn.clicked.connect(self.generate)
+        self.scan_stop_btn.clicked.connect(self.generate)
+        self.generate_doc_btn.clicked.connect(self.view_model._handle_document_generation)
 
         # File Control layout
         controls.hBoxlayout.addWidget(
@@ -559,7 +575,8 @@ class Window(FluentWindow):
         controls.hBoxlayout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls.hBoxlayout.addWidget(self.generate_btn, Qt.AlignmentFlag.AlignLeft)
+        controls.hBoxlayout.addItem(spacer)        
+        controls.hBoxlayout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
         template_control.hBoxlayout.addWidget(
@@ -571,10 +588,13 @@ class Window(FluentWindow):
         template_control.hBoxlayout.addWidget(
             self.include_reply, Qt.AlignmentFlag.AlignLeft
         )
+        template_control.hBoxlayout.addWidget(
+            self.scan_stop_btn, Qt.AlignmentFlag.AlignLeft
+        )
 
         # Dismissal Layout
         self.dismissal_interface.vBoxlayout.addWidget(
-            self.streamCard,
+            self.stream_card,
             alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
         )
         self.dismissal_interface.vBoxlayout.addWidget(
@@ -600,8 +620,11 @@ class Window(FluentWindow):
                 filename = os.path.splitext(os.path.basename(file_path))[0]
                 if not len(filename) == 0:
                     self.file_button.data = file_path
-                    text = self.view_model._truncate_string(filename, 40)
+                    text = self.view_model._truncate_string(filename, 30)
                     self.file_button.setText(text)
+                    if self.view_model.is_new_session(file_path) is True:
+                        self.view_model._document = None
+                        self.generate_doc_btn.setEnabled(False)
                 else:
                     self.file_button.setText("Add file")
 
@@ -609,7 +632,7 @@ class Window(FluentWindow):
                 directory = QFileDialog.getExistingDirectory(self, "Select Directory")
                 if not (directory is None or len(directory) == 0):
                     self.save_location_btn.data = directory
-                    text = self.view_model._truncate_string(directory, 24)
+                    text = self.view_model._truncate_string(directory, 14)
                     self.save_location_btn.setText(text)
 
         except Exception:
@@ -644,31 +667,59 @@ class Window(FluentWindow):
             pass
 
     def generate(self):
-        self.generate_btn.setEnabled(False)
-        self.streamCard.outputWidget.setPlainText("")
+        self.generate_doc_btn.setEnabled(False)
+        self.stream_card.chatbox.setPlainText("")
         try:
             data = GenerateDocData(
                 url=self.api_url.data,
                 pdf_path=self.file_button.data,
-                save_path=self.save_location_btn.text(),
+                save_path=self.save_location_btn.data,
                 is_reply_included=self.include_reply.isChecked(),
                 selected_template=TemplateType(self.template_combobox.currentText()),
                 is_custom_prompt=False,
                 custom_prompt="",
             )
             self.view_model.main_handler(data)
+            self.stream_card.chatbox.setPlainText("Preparing... ")
+            self.scan_stop_btn.data = "scanning" 
+            self.scan_stop_btn.setText("Stop")
         except Exception as e:
             print(traceback.format_exc())
             self.show_message_box("Error", f"{e}")
 
     def generate_events(self, doc: UpdateDocData, id: str):
         if doc.status == "Done":
-            self.generate_btn.setEnabled(True)
+            self.generate_doc_btn.setEnabled(True)
+            pass
             
         if doc.error:
-            self.generate_btn.setEnabled(True)
+            self.generate_doc_btn.setEnabled(True)
             self.show_message_box("Error", str(doc.error))
     
+    def update_chatbox(self, text: str):
+        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
+        self.stream_card.chatbox.insertPlainText(text)
+
+    @pyqtSlot(StateLLM)
+    def update_assistant_status(self, state: StateLLM):
+        print(f"Your Assistant is {state.value}")
+
+    @pyqtSlot(bool)
+    def _finished(self, state):
+        if state is True:
+            self.scan_stop_btn.setText("Scan PDF")
+            self.generate_doc_btn.setEnabled(True)
+
+    @pyqtSlot(object)
+    def _cloud_llm_error(self, err):
+        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
+        self.stream_card.chatbox.insertPlainText("\nOppsss...Something went wrong on my end.")
+        self.generate_doc_btn.setEnabled(True)
+    
+    def closeEvent(self, e):
+        self.view_model.stop_agents()
+        return super().closeEvent(e)
+
 
 def register_search_path(relative_path=None):
     relative_path = (
@@ -682,7 +733,6 @@ def register_search_path(relative_path=None):
 
 if __name__ == "__main__":
     register_search_path()
-
     app = QApplication(sys.argv)
     window = Window()
     # title_bar = FluentTitleBar(window)

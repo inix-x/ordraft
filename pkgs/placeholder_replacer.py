@@ -36,7 +36,7 @@ class WordPlaceholderReplacer:
 
     def draft_dismissal(self, document: Document) -> Document:
         try:
-            document.doc_payload.validate()
+            # document.doc_payload.validate()
             api_data = document.doc_payload
         except Exception as e:
             document.doc_payload.error_occured = e

@@ -8,6 +8,7 @@ class MyFluentIcon(FluentIconBase, Enum):
 
     THEMEMODE = "theme"
     URL = "link"
+    NEW_FILE = "new_file"
 
     def path(self, theme=Theme.AUTO):
         return f'icons:{self.value}_{getIconColor(theme)}.svg'

@@ -3,20 +3,24 @@ import sys
 import traceback
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QThreadPool
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
     )
     print(test)
-    
+
+
+from pkgs.workers import AgentWorker, BackgroundWorker
+from pkgs.models import CloudLLM, StateLLM
 from pkgs.api import ApiWorker, ModelLLM
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.dataclass import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
 from pkgs.misc import Data
 from pkgs.enums import TemplateFile
 from pkgs.list_widget import CustomListItem
+
 
 class MainViewModel(QObject):
     errorOccured = pyqtSignal(str)
@@ -28,6 +32,12 @@ class MainViewModel(QObject):
     docEvents = pyqtSignal(UpdateDocData, str)
     docOpened = pyqtSignal(str, object)
 
+    chatbox_update = pyqtSignal(str)
+
+    llm_state_changed = pyqtSignal(StateLLM)
+    llm_stream_finished = pyqtSignal(bool)
+    
+
     def __init__(self, data_model: Data = None):
         super().__init__()
 
@@ -35,11 +45,27 @@ class MainViewModel(QObject):
         self.word_processor = WordPlaceholderReplacer()
 
         self._documents = DocumentsCollection()
-
+        self._document: Document = None
         self._doc_map = {}
-        # Agent
-        self._setup_agent()
 
+        # Cloud LLMs
+        self._cloud_llm = CloudLLM()
+        self._local_llm = ModelLLM()
+        
+        # Agents
+        self.setup_agents()
+
+        # Background Worker
+        self.setup_background_worker()
+
+        # API
+        self._cloud_llm.hugging_face_api.llm_state_changed.connect(self._update_llm_state)
+        
+        # Connections
+        self._cloud_llm.text_chunk.connect(self._update_chat_box)
+
+        self._cloud_llm.error_occured.connect(self._cloud_llm_error)
+        self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
     @property
     def documents(self) -> DocumentsCollection:
         return self._documents
@@ -69,7 +95,7 @@ class MainViewModel(QObject):
                 name=os.path.basename(data.pdf_path)[0]
             )
             self.documents.add(document)
-
+            self._document = document
             self.docEvents.emit(doc_status, document.id)
             template_file = TemplateFile.get_template_file(data.selected_template, data.is_reply_included)
             template_filepath = os.path.join(
@@ -81,17 +107,34 @@ class MainViewModel(QObject):
             return False, ve
         try:
             self.word_processor.template_filepath = template_filepath
-            self._api_worker.add_task(data=document)
+            # self._api_worker.add_task(data=document)
+            if self._cloud_llm.hugging_face_api.get_llm_state() == StateLLM.Running:
+                self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
+            else:
+                raise RuntimeError("LLM is not running. Contact Admin")
             return True, None
         except Exception as e:
             print(traceback.format_exc())
+            self.errorOccured.emit(str(e))
             return False, e
 
+    def is_new_session(self, pdf_file_path) -> bool:
+        try:
+            if self._document is None:
+                return True
+                
+            if pdf_file_path != self._document.temp_doc_data.pdf_path:
+                return True
+
+            return False
+        except Exception:
+            return True
+
     # -----Private-----
-    def _handle_document_generation(self, doc: Document):
+    def _handle_document_generation(self):
         try:
             # doc.validate()
-            self.documents[doc.id] = doc
+            doc = self._document
             doc_status = UpdateDocData(
                 id=doc.id,
                 status="Generating",
@@ -122,6 +165,25 @@ class MainViewModel(QObject):
         finally:
             self._api_worker.allow_next_task()
     
+    @pyqtSlot(str)
+    def _update_chat_box(self, text_chunk):
+        if text_chunk not in ["<think>", "</think>"]:
+            self.chatbox_update.emit(text_chunk)
+    
+    @pyqtSlot(object)
+    def _cloud_llm_error(self, err):
+        self.errorOccured.emit(err)
+
+    @pyqtSlot(bool, str)
+    def _cloud_llm_stream_finished(self, state, output):
+        success, parsed_output = self._cloud_llm._parse_response(output)
+        
+        if success:
+            self._document.doc_payload.status = "Success"
+            self._document.doc_payload.api_response = parsed_output
+        
+        self.llm_stream_finished.emit(state)
+    
     @pyqtSlot(Document)
     def _handle_status_changed(self, doc: Document):
         try:
@@ -151,24 +213,57 @@ class MainViewModel(QObject):
         except Exception as e:
             print(f"{e}: {traceback.format_exc()}")
         
-    def _setup_agent(self):
+    def setup_agents(self):
+        
+        self._api_worker_thread = QThread()
         self._api_worker = ApiWorker(ModelLLM())
-
-        self._thread = QThread()
-        self._api_worker.moveToThread(self._thread)
-        self._thread.started.connect(self._api_worker.run)
+        self._api_worker.moveToThread(self._api_worker_thread)
         self._api_worker.statusChanged.connect(self._handle_status_changed)
-        self._api_worker.finished.connect(self._thread.quit)
+        self._api_worker.finished.connect(self._api_worker_thread.quit)
 
-        self._thread.start()
+        self._api_worker_thread.started.connect(self._api_worker.run)
+        self._api_worker_thread.start()
 
-    def _stop_agent(self):
+        self._cloud_llm_worker_thread = QThread()
+        self._cloud_llm_worker = AgentWorker()
+        self._cloud_llm_worker.status_changed.connect(self._handle_status_changed) # not activated yet
+        self._cloud_llm_worker.finished.connect(self._cloud_llm_worker_thread.quit)
+        self._cloud_llm_worker.error_occured.connect(self._handle_error)
+        self._cloud_llm_worker.moveToThread(self._cloud_llm_worker_thread)
+        
+        self._cloud_llm_worker_thread.started.connect(self._cloud_llm_worker.run)
+        self._cloud_llm_worker_thread.start()
+
+    def stop_agents(self):
         """Stop the worker and wait for the thread to finish."""
         self._api_worker.stop()
-        self.thread.quit()
-        self.thread.wait()
+        self._api_worker_thread.quit()
+        self._api_worker_thread.wait()
 
-    
+        
+        self._cloud_llm_worker.stop()
+        self._cloud_llm_worker_thread.quit()
+        self._cloud_llm_worker_thread.wait()
+
+        self._llm_state_bgw.stop()
+        self._llm_state_bgw_thread.quit()
+        self._llm_state_bgw_thread.wait()
+
+    def setup_background_worker(self):
+        self._llm_state_bgw_thread = QThread()
+        self._llm_state_bgw = BackgroundWorker(
+            name="LLM State Checker",
+            func=self._cloud_llm.hugging_face_api.get_llm_state,
+            interval=60
+        )
+
+        self._llm_state_bgw.error_occured.connect(self._handle_error)
+        self._llm_state_bgw.finished.connect(self._llm_state_bgw_thread.quit)
+        self._llm_state_bgw.moveToThread(self._llm_state_bgw_thread)
+
+        self._llm_state_bgw_thread.started.connect(self._llm_state_bgw.run)
+        self._llm_state_bgw_thread.start()
+
     @pyqtSlot()
     def open_document(self, id):
         try:
@@ -209,3 +304,11 @@ class MainViewModel(QObject):
             return widget
 
         return None
+    
+    @pyqtSlot(StateLLM)
+    def _update_llm_state(self, state: StateLLM):
+        self.llm_state_changed.emit(state)
+
+    @pyqtSlot(object)
+    def _handle_error(self, err: object):
+        print(err)
