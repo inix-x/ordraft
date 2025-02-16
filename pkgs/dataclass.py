@@ -19,12 +19,15 @@ class GenerateDocData:
     save_path: str
     selected_template: TemplateType
     custom_prompt: str
+    stream: bool = field(default=False)
     model: Models = field(default=Models.deepseek_r1_distill_llama_8b)
     is_reply_included: bool = field(default=False)
     is_custom_prompt: bool = field(default=False)
     
     def validate(self):
         errors = []
+        if not isinstance(self.selected_template, TemplateType) or not self.selected_template.value.strip():
+            errors.append("Choose a Template")
         if not self.url.strip():
             errors.append("Name cannot be empty.")
         if not self.pdf_path.strip():

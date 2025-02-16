@@ -1,5 +1,5 @@
 from pkgs.api import ApiWorker
-from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
+from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, URL
 from pkgs.enums import TemplateFile, TemplateType, Models
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.main_vm import MainViewModel
@@ -37,5 +37,6 @@ __all__ = [
     "DataLLM",
     "ApiWorker",
     "UpdateDocData",
-    "CustomListItem"
+    "CustomListItem",
+    "URL"
 ]

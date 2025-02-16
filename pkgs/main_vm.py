@@ -1,7 +1,6 @@
 import os
 import sys
 import traceback
-from uuid import uuid4
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
@@ -29,7 +28,7 @@ class MainViewModel(QObject):
     docEvents = pyqtSignal(UpdateDocData, str)
     docOpened = pyqtSignal(str, object)
 
-    def __init__(self, data_model: Data):
+    def __init__(self, data_model: Data = None):
         super().__init__()
 
         self._data_model = data_model

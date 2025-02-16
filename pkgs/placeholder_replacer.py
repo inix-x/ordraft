@@ -71,13 +71,14 @@ class WordPlaceholderReplacer:
         """
         # print(type(replacements))
         # print(replacements)
-        
+
         processed_replacements = {
             key: self._clean_value(value)
             for key, value in replacements.items()
         }
 
         self._template.render(processed_replacements)
+        return processed_replacements
 
     def _clean_value(self, value):
         """
@@ -89,7 +90,7 @@ class WordPlaceholderReplacer:
         Returns:
             str: Cleaned and concatenated value.
         """
-        def add_period(text):
+        def add_period(text: str):
             text = text.strip()  
             
             if text and not text.endswith('.'):

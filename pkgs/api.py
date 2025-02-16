@@ -12,7 +12,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition,
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS
+from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, IMPORTANT_PROMPT
 from pkgs.dataclass import DocPayload, Document
 
 
@@ -48,12 +48,13 @@ class ModelLLM(QObject):
         payload = self._build_payload(
             pdf_text=pdf_text,
             custom_prompt=data.temp_doc_data.custom_prompt,
-            model=data.doc_payload.model,
+            model=data.doc_payload.model.value,
         )
-
         data.doc_payload.status = "Analyzing"
         self.statusChanged.emit(data)
+        
         success, res = self._send_request(payload=payload, url=data.doc_payload.api_url)
+        
         if success is False:
             data.doc_payload.status = "API Error"
             data.doc_payload.error_occured = res
@@ -100,12 +101,17 @@ class ModelLLM(QObject):
         try:
             this_url = f"{url}/v1/chat/completions"
 
+
             response = requests.post(
                 this_url, headers=headers, data=json.dumps(payload), timeout=300
             )
             response.raise_for_status()
             res = response.json()
         except requests.RequestException as e:
+            print(f"Error occurred during API request: {e}")
+            succeess = False
+            res = e
+        except Exception as e:
             print(f"Error occurred during API request: {e}")
             succeess = False
             res = e
@@ -138,10 +144,12 @@ class ModelLLM(QObject):
         Constructs the payload to be sent to the API for extracting structured information.
 
         Parameters:
+            custom_prompt (str): Custom prompt if provided, otherwise default guidelines.
             pdf_text (str): The extracted text from the PDF.
+            model (str): The model identifier.
 
         Returns:
-            dict: The JSON payload.
+            dict: The JSON payload as a dictionary.
         """
         # new: Define the JSON template for the extracted information
         template = """
@@ -155,31 +163,27 @@ class ModelLLM(QObject):
                 "",
                 ""
             ]
-            }
         }
         """
-        prompt = custom_prompt if custom_prompt else DEFAULT_GUIDELINES
+        # Choose custom prompt if available, otherwise default guidelines
+        guidelines = custom_prompt if custom_prompt else DEFAULT_GUIDELINES
 
-        prompt = f"""
-            {prompt}
-
-            {DEFAULT_INSTRUCTIONS}
-        """
-        # new: Build the user prompt by embedding the template and guidelines along with the PDF text.
         user_prompt = f"""
-            **TASK**  
-            Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
+        **TASK**  
+        Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
 
-            {prompt}
-            
-            **TEMPLATE (DO NOT MODIFY THE KEYS)**
-            Template:
-            {template}
+        {DEFAULT_INSTRUCTIONS}
+        
+        {IMPORTANT_PROMPT}
+        {guidelines}
+        
+        **TEMPLATE (DO NOT MODIFY THE KEYS)**
+        Template:
+        {template}
 
-            PDF_TEXT:
-            {pdf_text}
+        PDF_TEXT:
+        {pdf_text}
         """
-        # new: Construct the payload with the defined model and prompt
         payload = {
             "model": model,
             "messages": [
@@ -193,6 +197,7 @@ class ModelLLM(QObject):
             "max_tokens": -1,
             "stream": False,
         }
+        # new: Return the payload as a dictionary instead of a JSON string.
         return payload
 
     def _parse_response(self, response_json) -> tuple[bool, dict]:
