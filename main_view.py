@@ -341,6 +341,7 @@ class Window(FluentWindow):
         self.view_model.chatbox_update.connect(self.update_chatbox)
         self.view_model.llm_state_changed.connect(self.update_assistant_status)
         self.view_model.llm_stream_finished.connect(self._finished)
+        self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
 
         self.initNavigation()
         self.initWindow()
@@ -667,6 +668,11 @@ class Window(FluentWindow):
             pass
 
     def generate(self):
+        if self.scan_stop_btn.data == "scanning":
+            self.view_model.handle_stream_stop(True)
+            self.scan_stop_btn.setEnabled(False)
+            return 
+        
         self.generate_doc_btn.setEnabled(False)
         self.stream_card.chatbox.setPlainText("")
         try:
@@ -708,7 +714,18 @@ class Window(FluentWindow):
     def _finished(self, state):
         if state is True:
             self.scan_stop_btn.setText("Scan PDF")
+            self.scan_stop_btn.data = "not-scanning"
             self.generate_doc_btn.setEnabled(True)
+
+    @pyqtSlot(bool)
+    def _stream_stopped_success(self, state):
+        if state is not True:
+            self.show_message_box("Error", "RESTART THE APP")
+            return
+        
+        self.scan_stop_btn.data = 'not-scanning'
+        self.scan_stop_btn.setText("Scan PDF")
+        self.scan_stop_btn.setEnabled(True)
 
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):

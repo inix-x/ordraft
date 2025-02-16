@@ -393,6 +393,8 @@ class CloudLLM(QObject):
     text_chunk = pyqtSignal(str)
     error_occured = pyqtSignal(object)
 
+    stream_stopped = pyqtSignal(bool)
+
     def __init__(self):
         super().__init__()
 
@@ -405,6 +407,7 @@ class CloudLLM(QObject):
             )
         self._model = None
 
+        self._stop_requested = False
     def __post_init__(self):
         pass
 
@@ -503,6 +506,8 @@ class CloudLLM(QObject):
         buffer = ""
         current_think_text = ""  
         
+        self._stop_requested = False
+        
         try:
             chat_completion = self._llm_client.chat.completions.create(
                 model=self._hugging_face_api.llm_model,
@@ -513,6 +518,10 @@ class CloudLLM(QObject):
             )
 
             for message in chat_completion:
+                if self._stop_requested is True:
+                    self.stream_stopped.emit(True)
+                    break
+
                 try:
                     text = message.choices[0].delta.content
                 except Exception as e:
@@ -547,7 +556,13 @@ class CloudLLM(QObject):
         except Exception as e:
             self.error_occured.emit(f"\n[Error] {str(e)}")
         finally:
-            self.stream_finished.emit(True, buffer)
+            completed = not self._stop_requested
+            self.stream_finished.emit(completed, buffer)
+
+    def stop(self):
+        """Call this method to stop the streaming process."""
+        self._stop_requested = True
+
 
     def _parse_response(self, content) -> tuple[bool, dict]:
         """

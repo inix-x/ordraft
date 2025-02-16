@@ -36,6 +36,7 @@ class MainViewModel(QObject):
 
     llm_state_changed = pyqtSignal(StateLLM)
     llm_stream_finished = pyqtSignal(bool)
+    stream_stopped_sucess = pyqtSignal(bool)
     
 
     def __init__(self, data_model: Data = None):
@@ -66,6 +67,8 @@ class MainViewModel(QObject):
 
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
+        self._cloud_llm.stream_stopped.connect(self._stream_stopped_success)
+        
     @property
     def documents(self) -> DocumentsCollection:
         return self._documents
@@ -183,6 +186,10 @@ class MainViewModel(QObject):
             self._document.doc_payload.api_response = parsed_output
         
         self.llm_stream_finished.emit(state)
+    
+    @pyqtSlot(bool)
+    def _stream_stopped_success(self, state):
+        self.stream_stopped_sucess.emit(state)
     
     @pyqtSlot(Document)
     def _handle_status_changed(self, doc: Document):
@@ -312,3 +319,7 @@ class MainViewModel(QObject):
     @pyqtSlot(object)
     def _handle_error(self, err: object):
         print(err)
+
+    @pyqtSlot(bool)
+    def handle_stream_stop(self, state):
+        self._cloud_llm.stop()
