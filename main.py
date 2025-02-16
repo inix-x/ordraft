@@ -1,224 +1,692 @@
-import sys
-import pathlib
+# fmt: off
 import os
+import sys
 import traceback
-from typing import Any
+import pathlib
+import re
+from enum import Enum
 from functools import partial
+from typing import Union
 
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QComboBox, QPushButton, QLineEdit,
-                             QFileDialog, QMessageBox, QLabel, QCheckBox,
-                             QTextEdit, QListWidget, QListWidgetItem, QMenu)
-from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths, QDir
-from PyQt6.QtGui import QIcon, QDesktopServices, QAction
+
+from PyQt6.QtCore import (
+    Qt, QObject, QDir, Qt, QUrl,
+    QPropertyAnimation, QStandardPaths, QSize, pyqtSlot
+)
+from PyQt6.QtWidgets import (
+    QFrame, QApplication, QVBoxLayout,
+    QHBoxLayout, QWidget, QSplitter,
+    QListWidget, QSplitterHandle, QGraphicsOpacityEffect,
+    QSizePolicy, QFileDialog, QLabel, QSpacerItem
+)
+from PyQt6.QtGui import QIcon, QColor, QPainter, QPainterPath, QDesktopServices
+
+from qfluentwidgets import (
+    NavigationItemPosition, FluentWindow, SubtitleLabel, setFont, QConfig,
+    SwitchSettingCard, qconfig, StyleSheetBase, Theme, setTheme,
+    setThemeColor, AvatarWidget, SingleDirectionScrollArea, PushButton, ElevatedCardWidget,
+    ImageLabel, CaptionLabel, CardWidget, SettingCard, ScrollArea,
+    themeColor, isDarkTheme, ListWidget, IconWidget,
+    BodyLabel, TransparentToolButton, PlainTextEdit, ComboBox,
+    CheckBox, MessageBox, MessageBoxBase, LineEdit,
+    PushSettingCard,
+)
+from qfluentwidgets.common import (
+    ConfigItem, BoolValidator, ColorValidator,
+    FluentStyleSheet, FluentIconBase,
+)
+from qfluentwidgets.components.settings.setting_card import SettingIconWidget
+from qfluentwidgets import FluentIcon as FIF
+
+
+from pkgs.icons import MyFluentIcon as CFIF
+
+
+from pkgs import MainViewModel, Data
 
 from pkgs import (
-    DEFAULT_GUIDELINES, 
-    TemplateType, 
-    MainViewModel, 
-    GenerateDocData,
-    Data,
-    UpdateDocData,
-    CustomListItem,
-    Utils,
-    Models
+    URL, DEFAULT_GUIDELINES, TemplateType, MainViewModel,
+    GenerateDocData, Data, UpdateDocData, CustomListItem,
+    Utils, Models,
 )
 
-from pkgs import SettingsViewModel, SettingsModel
+from pkgs import SettingsViewModel, SettingsModel, StateLLM
+# fmt: on
 
 
-class MainWindow(QMainWindow):
-    def __init__(self, viewmodel: MainViewModel):
-        super().__init__()
-        self.setWindowTitle("OrDraft")
-        icon_filepath = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "resource/icon.ico"
+class StyleSheet(StyleSheetBase, Enum):
+    """Style sheet"""
+
+    WINDOW = "window"
+
+    def path(self, theme=Theme.AUTO):
+        theme = qconfig.theme if theme == Theme.AUTO else theme
+        return f"qss/{theme.value.lower()}/{self.value}.qss"
+
+
+class Config(QConfig):
+    darkTheme = ConfigItem("MainWindow", "darkTheme", True, BoolValidator())
+    transparent_bg = ConfigItem(
+        "MainWindow", "TransparentSubInterface", False, BoolValidator()
+    )
+
+
+class Container(QFrame):
+
+    def __init__(self, text: str, parent=None):
+        super().__init__(parent=parent)
+        self.hBoxlayout = QHBoxLayout(self)
+        self.hBoxlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.setObjectName(text.replace(" ", "-"))
+
+
+class Widget(QFrame):
+
+    def __init__(self, text: str, parent=None):
+        super().__init__(parent=parent)
+        self.label = SubtitleLabel(text, self)
+        self.vBoxlayout = QVBoxLayout(self)
+        self.vBoxlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        setFont(self.label, 24)
+        self.label.setAlignment(
+            Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter
         )
-        self.setWindowIcon(QIcon(icon_filepath))
-        self.setGeometry(100, 100, 600, 500)
-        self.setFixedHeight(500)
-        self.setFixedWidth(600)
+        self.vBoxlayout.addWidget(
+            self.label, stretch=0, alignment=Qt.AlignmentFlag.AlignTop
+        )
 
-        # ViewModels
-        self.viewmodel = viewmodel
-        self.settings_vm = SettingsViewModel(SettingsModel())
+        self.setObjectName(text.replace(" ", "-"))
 
-        self._utils = Utils()
 
-        self.setup_menu()
-        self._setup_ui()
-        self._setup_connections()
-        self._load_settings()
+class CustomPushSettingCard(PushSettingCard):
 
-    def _load_settings(self):
+    def __init__(
+        self,
+        text,
+        icon: Union[str, QIcon, FluentIconBase],
+        title,
+        data=None,
+        content=None,
+        parent=None,
+    ):
+        """
+        Parameters
+        ----------
+        text: str
+            button text
+        icon: str | QIcon | FluentIconBase
+            the icon to be drawn
+
+        title: str
+            the title of card
+
+        content: str
+            the content of card
+
+        parent: QWidget
+            parent widget
+        """
+        super().__init__(
+            text=text, icon=icon, title=title, content=content, parent=parent
+        )
+        self._data = data
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data: str):
+        if self._data != data and isinstance(data, str):
+            self._data = data
+
+    def paintEvent(self, e):
+        painter = QPainter(self)
+        painter.setRenderHints(QPainter.RenderHint.Antialiasing)
+
+        if isDarkTheme():
+            painter.setBrush(QColor(255, 255, 255, 13))
+            painter.setPen(QColor(0, 0, 0, 50))
+        else:
+            painter.setBrush(QColor(255, 255, 255, 170))
+            painter.setPen(QColor(0, 0, 0, 19))
+
+        painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 6, 6)
+
+
+class PushButtonData(PushButton):
+
+    def __init__(self, icon, text, parent=None):
+        super().__init__(parent)
+        self.setIcon(icon)
+        self.setText(text)
+        self._data = None
+
+    @property
+    def data(self):
+        return self._data
+
+    @data.setter
+    def data(self, data: str):
+        self._data = data
+
+
+class AppCard(CardWidget):
+
+    def __init__(self, icon: QIcon, title, content, parent=None):
+        super().__init__(parent)
+        self.iconWidget = IconWidget(icon)
+        self.titleLabel = BodyLabel(title, self)
+        self.contentLabel = CaptionLabel(content, self)
+        self.openButton = PushButton("Open", self)
+        self.moreButton = TransparentToolButton(FIF.MORE, self)
+
+        self.hBoxLayout = QHBoxLayout(self)
+        self.vBoxLayout = QVBoxLayout()
+
+        self.setFixedHeight(73)
+        self.iconWidget.setFixedSize(48, 48)
+        self.contentLabel.setTextColor("#606060", "#d2d2d2")
+        self.openButton.setFixedWidth(120)
+
+        self.hBoxLayout.setContentsMargins(20, 11, 11, 11)
+        self.hBoxLayout.setSpacing(15)
+        self.hBoxLayout.addWidget(self.iconWidget)
+
+        self.vBoxLayout.setContentsMargins(0, 0, 0, 0)
+        self.vBoxLayout.setSpacing(0)
+        self.vBoxLayout.addWidget(self.titleLabel, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.vBoxLayout.addWidget(self.contentLabel, 0, Qt.AlignmentFlag.AlignVCenter)
+        self.vBoxLayout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        self.hBoxLayout.addLayout(self.vBoxLayout)
+
+        self.hBoxLayout.addStretch(1)
+        self.hBoxLayout.addWidget(self.openButton, 0, Qt.AlignmentFlag.AlignRight)
+        self.hBoxLayout.addWidget(self.moreButton, 0, Qt.AlignmentFlag.AlignRight)
+
+        self.moreButton.setFixedSize(32, 32)
+
+
+class InfoMessageBox(MessageBoxBase):
+    """Custom message box"""
+
+    def __init__(self, title, content, parent=None):
+        super().__init__(parent)
+        self.titleLabel = SubtitleLabel(title)
+        self.content = BodyLabel(content)
+
+        self.viewLayout.addWidget(self.titleLabel)
+        self.viewLayout.addWidget(self.content)
+
+        self.widget.setMinimumWidth(350)
+
+        self.cancelButton.hide()
+        self.buttonLayout.insertStretch(1)
+
+        self.hide()
+
+    def set_title(self, text):
+        self.titleLabel.setText(text)
+
+    def set_content(self, text):
+        self.content.setText(text)
+
+
+class LineEditMessageBox(MessageBoxBase):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.titleLabel = SubtitleLabel("Open URL", self)
+        self.urlLineEdit = LineEdit(self)
+
+        self.urlLineEdit.setPlaceholderText(
+            "Enter the URL of a file, stream, or playlist"
+        )
+        self.urlLineEdit.setClearButtonEnabled(True)
+
+        self.warningLabel = CaptionLabel("Invalid URL")
+        self.warningLabel.setTextColor("#cf1010", QColor(255, 28, 32))
+
+        # add widget to view layout
+        self.viewLayout.addWidget(self.titleLabel)
+        self.viewLayout.addWidget(self.urlLineEdit)
+        self.viewLayout.addWidget(self.warningLabel)
+        self.warningLabel.hide()
+
+        self.widget.setMinimumWidth(350)
+        self.hide()
+
+    def validate(self):
+        """Override to validate form data"""
+        isValid = QUrl(self.urlLineEdit.text()).isValid()
+        self.warningLabel.setHidden(isValid)
+        return isValid
+
+    def validate_url(self):
+        """Override to validate form data"""
+        url_text = self.urlLineEdit.text().strip()
+
+        url_pattern = re.compile(
+            r"^(https?|ftp):\/\/"
+            r"("
+            r"((\d{1,3}\.){3}\d{1,3})"
+            r"|"
+            r"([a-zA-Z0-9-]+(\.[a-zA-Z]{2,})+)"
+            r")"
+            r"(:\d{1,5})?"
+        )
+
+        is_valid = bool(url_pattern.match(url_text))
+
+        self.warningLabel.setHidden(is_valid)
+        return is_valid
+
+
+class AIStreamCard(CardWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("AI Stream Output")
+
+        self.setClickEnabled(False)
+
+        self._hover = False
+
+        self.chatbox = PlainTextEdit(self)
+        self.chatbox.setReadOnly(True)
+        self.chatbox.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.chatbox)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+    def _hoverBackgroundColor(self):
+        if self._hover:
+            return CardWidget()._hoverBackgroundColor()
+        else:
+            return CardWidget()._normalBackgroundColor()
+
+    def _pressedBackgroundColor(self):
+        if self._hover:
+            return CardWidget()._pressedBackgroundColor()
+        else:
+            return CardWidget()._normalBackgroundColor()
+
+    def append_stream(self, text: str):
+        """
+        Append new text to the streaming output.
+        This method can be called repeatedly to update the card.
+        """
+        self.chatbox.append(text)
+
+
+class Window(FluentWindow):
+    """Main Interface"""
+
+    def __init__(self):
+        super().__init__()
+        self.cfg = Config()
+
+        # Interface
+        self.dismissal_interface = Widget("Dismissal", self)
+        self.settings_interface = Widget("Settings", self)
+
+        # Dependencies
+        self.view_model = MainViewModel(Data())
+
+        # Dependencies Connections
+        self.view_model.docEvents.connect(self.generate_events)
+        self.view_model.chatbox_update.connect(self.update_chatbox)
+        self.view_model.llm_state_changed.connect(self.update_assistant_status)
+        self.view_model.llm_stream_finished.connect(self._finished)
+        self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
+
+        self.initNavigation()
+        self.initWindow()
+        self.settings_setup_ui()
+        self.dismissal_setup_ui()
+        self._load_config()
+        self._components()
+
+        size = QSize(800, 600)
+        self.setMinimumSize(size)
+        self.setBaseSize(size)
+        self.resize(size)
+
+    def _load_config(self):
         try:
-            # Window Properties
-            settings = self.settings_vm.settings
-            self.resize(settings.windowGeometry.size)
-            self.move(settings.windowGeometry.pos)
-            # Fields
-            self.url_edit.setText(settings.api_url)
+            file_path = "config.json"
+            if not os.path.exists(file_path):
+                with open(file_path, "w") as file:
+                    file.write("")
+
+            qconfig.load("config.json", self.cfg)
+            self._load_theme()
         except Exception:
             print(traceback.format_exc())
 
-    def _setup_ui(self):
+    def _load_theme(self):
+        try:
+            dark_mode = self.cfg.darkTheme.value
+        except AttributeError:
+            dark_mode = self.cfg.darkTheme
 
-        # Central Widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)
+        setTheme(Theme.DARK if dark_mode else Theme.LIGHT)
 
-        # List widget
-        layout.addWidget(QLabel("Tasks"))
-        self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.list_widget.setHorizontalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
-        self.list_widget.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
-        layout.addWidget(self.list_widget)
-
-        network_layout = QHBoxLayout()
-        network_layout.addWidget(QLabel("URL:"))
-        self.url_edit = QLineEdit()
-        network_layout.addWidget(self.url_edit)
-
-        model_layout = QHBoxLayout()
-        model_layout.addWidget(QLabel("Assistant:"))
-        self.assisant = QComboBox()
-        self.assisant.addItems([template.value for template in Models])
-        model_layout.addWidget(self.assisant, stretch=1)
-
-        # network_layout.addWidget(QLabel("Port:"))
-        # self.port_edit = QLineEdit()
-        # self.port_edit.setPlaceholderText("1234")
-        # network_layout.addWidget(self.port_edit)
-
-        layout.addLayout(network_layout)
-        layout.addLayout(model_layout)
-
-        # Combo box setup
-        template_layout = QHBoxLayout()
-        template_layout.addWidget(QLabel("Template:"))
-        self.combo = QComboBox()
-        self.combo.addItems([template.value for template in TemplateType])
-        template_layout.addWidget(self.combo, stretch=1)
-
-        # Checkbox for including reply
-        self.include_reply_checkbox = QCheckBox("with Reply")
-        self.include_reply_checkbox.setChecked(True)  # Default: checked
-        template_layout.addWidget(self.include_reply_checkbox)
-        layout.addLayout(template_layout)
-
-        # Path selection row
-        doc_layout = QHBoxLayout()
-        layout.addLayout(doc_layout)
-        doc_layout.addWidget(QLabel("File location:"))
-
-        self.path_edit_file = QLineEdit()
-        self.path_edit_file.setReadOnly(True)
-        doc_layout.addWidget(self.path_edit_file)
-
-        self.browse_btn_file = QPushButton("Browse")
-        doc_layout.addWidget(self.browse_btn_file)
-
-        # Save location row
-        save_layout = QHBoxLayout()
-        layout.addLayout(save_layout)
-        save_layout.addWidget(QLabel("Save Location:"))
-        default_save_path = os.path.join(
-            os.path.expanduser("~"), "Documents", "OrDraft"
+        (
+            """QLabel { color: #FF7043; }"""
+            if dark_mode
+            else """QLabel { color: #D32F2F; }"""
         )
-        os.makedirs(default_save_path, exist_ok=True)
-        self.path_edit_save = QLineEdit()
-        self.path_edit_save.setReadOnly(True)
-        self.path_edit_save.setText(default_save_path)
-        save_layout.addWidget(self.path_edit_save)
+        setThemeColor(QColor("#3CB969"))
+        self.cfg.save()
 
-        self.browse_btn_save = QPushButton("...")
-        save_layout.addWidget(self.browse_btn_save)
-
-        self.open_dir = QPushButton("Open")
-        save_layout.addWidget(self.open_dir)
-
-        self.custom_prompt = QCheckBox("Customize Prompt")
-        self.custom_prompt.setChecked(False)
-
-        layout.addWidget(self.custom_prompt)
-
-        self.prompt = QTextEdit()
-        self.prompt.setFixedHeight(100)
-        self.prompt.setEnabled(False)
-        layout.addWidget(self.prompt)
-
-        # Save button
-        self.generate = QPushButton("Generate")
-        layout.addWidget(
-            self.generate, alignment=Qt.AlignmentFlag.AlignRight, stretch=1
+    def initNavigation(self):
+        self.addSubInterface(self.dismissal_interface, FIF.DOCUMENT, "Draft Dismissal")
+        self.addSubInterface(
+            self.settings_interface,
+            FIF.SETTING,
+            "Settings",
+            NavigationItemPosition.BOTTOM,
         )
 
-        # Initialize path
-        self.update_template(self.combo.currentText())
+    def initWindow(self):
+        self.resize(900, 700)
+        self.setWindowIcon(QIcon("icons:app.icon.svg"))
+        self.setWindowTitle("OrDraft")
 
-    def _setup_connections(self):
-        # Connect signals
-        self.combo.currentTextChanged.connect(self.update_template)
-        self.browse_btn_file.clicked.connect(partial(self.browse_directory, 0))
-        self.browse_btn_save.clicked.connect(partial(self.browse_directory, 1))
-        self.generate.clicked.connect(self.save_data)
-        self.open_dir.clicked.connect(self.show_dir)
-        self.custom_prompt.checkStateChanged.connect(self.handle_show_prompt)
+    def settings_setup_ui(self):
+        """asd"""
+        # UI
+        # UI: APP
+        app_settings = SubtitleLabel("App", self)
+        setFont(app_settings, 18)
+        self.api_url = CustomPushSettingCard(
+            text="Change",
+            icon=CFIF.URL,
+            title="API",
+            content="DO NOT CHANGE. Unless the API url supports OpenAI-like endpoints",
+            data=URL,
+            parent=self,
+        )
+        self.template_dir = CustomPushSettingCard(
+            text="Show",
+            icon=FIF.FOLDER,
+            title="Template Location",
+            content="You may edit here the existing templates.",
+            data=URL,
+            parent=self,
+        )
 
-        self.viewmodel.docEvents.connect(self._update_doc_status_list)
-        self.viewmodel.docOpened.connect(self._doc_opened)
+        # UI: Aesthetics
+        aesthetics = SubtitleLabel("Aesthetics", self)
+        setFont(aesthetics, 18)
+        dark_theme = SwitchSettingCard(
+            icon=CFIF.THEMEMODE,
+            title="Dark Mode",
+            content="Enable dark mode theme",
+            configItem=self.cfg.darkTheme,
+        )
+        transparent = SwitchSettingCard(
+            icon=FIF.TRANSPARENT,
+            title="Enable Transparent View",
+            content="Set the background of the views to transparent",
+            configItem=self.cfg.transparent_bg,
+        )
 
-    def setup_menu(self):
-        menu_bar = self.menuBar()
-        menu_bar.setStyleSheet("border-bottom: 1px solid #30834C")
+        # Initial Values
+        dark_theme.switchButton.setChecked(self.cfg.darkTheme.value)
+        transparent.switchButton.setChecked(self.cfg.transparent_bg.value)
 
-        # ------------------------------------------
-        # App Menu
-        app_menu = menu_bar.addMenu("App")
-        app_menu.menuAction().setIconVisibleInMenu(False)
+        # Connections: App
+        self.api_url.button.clicked.connect(self._show_change_api_url)
+        self.template_dir.button.clicked.connect(self.show_template_dir)
 
-        # App Menu: Add Menu
-        add_sub_menu = QMenu("Add", self)
-        add_sub_menu.setEnabled(False)
-        add_sub_menu.menuAction().setIconVisibleInMenu(False)
+        # Connections: Aeshethics
+        dark_theme.switchButton.checkedChanged.connect(
+            lambda checked: self._change_visual(dark_theme=checked)
+        )
+        transparent.switchButton.checkedChanged.connect(
+            lambda checked: self._change_visual(transparent=checked)
+        )
+        # layout: App settings
+        self.settings_interface.vBoxlayout.addWidget(
+            app_settings, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            self.api_url, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        # layout: Aesthetics
+        self.settings_interface.vBoxlayout.addWidget(
+            aesthetics, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            dark_theme, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            transparent, alignment=Qt.AlignmentFlag.AlignTop
+        )
 
-        # App Menu: Add Menu: New template
-        new_template_act = QAction("New Template", self)
-        # new_template_act.triggered.connect(self.show_template_window)
-        new_template_act.setEnabled(False)
-        add_sub_menu.addAction(new_template_act)
+    def _change_visual(self, *args, **kwargs):
+        dark_theme = kwargs.get("dark_theme", None)
+        transparent = kwargs.get("transparent", None)
 
-        # App Menu: Settings
-        settings_act = QAction("Settings", self)
-        settings_act.setEnabled(False)
-        # settings_act.triggered.connect(self.show_settings_window)
+        if dark_theme is not None:
+            setTheme(Theme.DARK if dark_theme else Theme.LIGHT)
+            self.cfg.darkTheme = dark_theme
 
-        # App Menu: exit
-        exit_action = QAction("Exit", self)
-        exit_action.triggered.connect(self.close)
+            style = (
+                """QLabel { color: #FF7043; }"""
+                if dark_theme
+                else """QLabel { color: #D32F2F; }"""
+            )
+            self.api_url.contentLabel.setStyleSheet(style)
 
-        app_menu.addMenu(add_sub_menu)
-        app_menu.addAction(settings_act)
-        app_menu.addAction(exit_action)
+        if transparent is not None:
+            self.toggleStackedBackground(transparent)
+            self._updateStackedBackground()
+            self.cfg.transparent_bg = transparent
 
-        # ------------------------------------------
-        # Help menu
-        help_menu = menu_bar.addMenu("Help")
-        change_template_dir_action = QAction("Show Template folder", self)
-        change_template_dir_action.triggered.connect(self.show_template_dir)
-        help_menu.addAction(change_template_dir_action)
+        self.cfg.save()
+
+    def _show_change_api_url(self):
+        self.line_edit_message_box.titleLabel.setText("Change API URL")
+        self.line_edit_message_box.urlLineEdit.setPlaceholderText("New API URL")
+        test = self.line_edit_message_box.exec()
+
+        if test == 1:
+            self._handle_change_api_url()
+
+    def _handle_change_api_url(self):
+        if self.line_edit_message_box.validate_url():
+            self.api_url.data = self.line_edit_message_box.urlLineEdit.text()
+            self.line_edit_message_box.close()
+            self.line_edit_message_box.warningLabel.hide()
+        else:
+            self.line_edit_message_box.urlLineEdit.setText("")
+            self.line_edit_message_box.warningLabel.show()
+            self._show_change_api_url()
+
+    def toggleStackedBackground(self, state: bool):
+        """Toggle the background transparency of the stacked widget"""
+        current_widget = self.stackedWidget.currentWidget()
+        if not current_widget:
+            return
+
+        self.stackedWidget.setProperty("isTransparent", state)
+        self._updateStackedBackground()
+
+    def _updateStackedBackground(self):
+        self.stackedWidget.setStyle(QApplication.style())
+
+    def _components(self):
+        self.message_box = InfoMessageBox("Popup", "", self)
+
+        self.line_edit_message_box = LineEditMessageBox(self)
+
+    def dismissal_setup_ui(self):
+        self.stream_card = AIStreamCard()
+        self.stream_card.setFixedWidth(725)
+        self.stream_card.setMinimumWidth(725)
+        self.stream_card.setFixedHeight(350)
+
+        self.stream_card.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
+        )
+
+        controls = Container("File Controls", self)
+        template_control = Container("Template Controls", self)
+        controls.setFixedWidth(725)
+        controls.setContentsMargins(0, 5, 0, 0)
+        template_control.setFixedWidth(725)
+        template_control.setContentsMargins(0, 20, 0, 0)
+
+        self.file_button = PushButtonData(FIF.ADD_TO, "Add new file")
+        self.file_button.setFixedWidth(275)
+
+        self.save_location_btn = PushButtonData(FIF.FOLDER_ADD, "Save location")
+        self.save_location_btn.setFixedWidth(150)
+    
+        self.open_save_location_btn = PushButton(FIF.FOLDER, "Open Generated Documents")
+        self.open_save_location_btn.setFixedWidth(225)
+
+        self.scan_stop_btn = PushButtonData(QIcon("icons:bot.icon.svg"), "Scan PDF")
+        self.scan_stop_btn.setFixedWidth(125)
+
+        self.generate_doc_btn = PushButton(CFIF.NEW_FILE, "Generate")
+        self.generate_doc_btn.setFixedWidth(125)
+        self.generate_doc_btn.setEnabled(False)
+
+        
+        # Template
+        self.template_combobox = ComboBox()
+        self.template_combobox.setFixedWidth(150)
+        self.template_combobox.addItems([template.value for template in TemplateType])
+        self.template_combobox.setPlaceholderText("Choose template")
+        self.template_combobox.setCurrentIndex(-1)
+
+        self.include_reply = CheckBox("Include Reply")
+
+        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        # Connections
+        self.file_button.clicked.connect(partial(self._browse, 0))
+        self.save_location_btn.clicked.connect(partial(self._browse, 1))
+        self.open_save_location_btn.clicked.connect(self._open_save_location)
+        self.scan_stop_btn.clicked.connect(self.generate)
+        self.generate_doc_btn.clicked.connect(self.view_model._handle_document_generation)
+
+        # File Control layout
+        controls.hBoxlayout.addWidget(
+            self.save_location_btn, Qt.AlignmentFlag.AlignLeft
+        )
+        controls.hBoxlayout.addWidget(
+            self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
+        )
+        controls.hBoxlayout.addItem(spacer)        
+        controls.hBoxlayout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
+
+        # Template Control Layout
+        template_control.hBoxlayout.addWidget(
+            self.file_button, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control.hBoxlayout.addWidget(
+            self.template_combobox, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control.hBoxlayout.addWidget(
+            self.include_reply, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control.hBoxlayout.addWidget(
+            self.scan_stop_btn, Qt.AlignmentFlag.AlignLeft
+        )
+
+        # Dismissal Layout
+        self.dismissal_interface.vBoxlayout.addWidget(
+            self.stream_card,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.dismissal_interface.vBoxlayout.addWidget(
+            template_control,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.dismissal_interface.vBoxlayout.addWidget(
+            controls,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        # controls.hBoxlayout.addWidget()
+
+    def _browse(self, type: int):
+        try:
+            if type == 0:
+                download_dir = QStandardPaths.writableLocation(
+                    QStandardPaths.StandardLocation.DownloadLocation
+                )
+                file_path, _ = QFileDialog.getOpenFileName(
+                    None, "Select a File", download_dir, "*.pdf"
+                )
+
+                filename = os.path.splitext(os.path.basename(file_path))[0]
+                if not len(filename) == 0:
+                    self.file_button.data = file_path
+                    text = self.view_model._truncate_string(filename, 30)
+                    self.file_button.setText(text)
+                    if self.view_model.is_new_session(file_path) is True:
+                        self.view_model._document = None
+                        self.generate_doc_btn.setEnabled(False)
+                else:
+                    self.file_button.setText("Add file")
+
+            else:
+                directory = QFileDialog.getExistingDirectory(self, "Select Directory")
+                if not (directory is None or len(directory) == 0):
+                    self.save_location_btn.data = directory
+                    text = self.view_model._truncate_string(directory, 14)
+                    self.save_location_btn.setText(text)
+
+        except Exception:
+            print(traceback.format_exc())
+
+    def _open_save_location(self):
+        try:
+            absolute_path = os.path.relpath(self.save_location_btn.data)
+
+            if absolute_path is None:
+                raise ValueError("Add Save Location first")
+
+            if not os.path.isdir(absolute_path):
+                raise FileNotFoundError(
+                    f"The directory '{absolute_path}' is not valid."
+                )
+
+            url = QUrl.fromLocalFile(absolute_path)
+
+            if not QDesktopServices.openUrl(url):
+                raise RuntimeError(f"Failed to open the folder: {absolute_path}")
+
+        except Exception as e:
+            self.show_message_box("Error", str(e))
+            # print(traceback.format_exc())
+
+    def show_message_box(self, title, content):
+        self.message_box.set_title(title)
+        self.message_box.set_content(content)
+
+        if self.message_box.exec():
+            pass
 
     def show_template_dir(self):
-        QMessageBox.information(
-            self,
+        self.show_message_box(
             "Reminder",
             """
-        1. Maintain the original filenames of the templates; do not rename them.
-        2. Do not delete the template files.
-        3. You may modify the templates, but {{placeholders}} must remain intact.
-        """,
+            1. Maintain the original filenames of the templates; do not rename them.
+            2. Do not delete the template files.
+            3. You may modify the templates, but {{placeholders}} must remain intact.
+            """,
         )
         app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", "Templates")
         try:
@@ -229,171 +697,75 @@ class MainWindow(QMainWindow):
         finally:
             QDesktopServices.openUrl(url)
 
-    def update_template(self, text):
-        pass
-
-    def show_dir(self):
-        try:
-            # Ensure the path is absolute
-            full_path = os.path.abspath(self.path_edit_save.text())
-            # Convert the file path to a QUrl
-            url = QUrl.fromLocalFile(full_path)
-            # Open the directory using QDesktopServices
-            QDesktopServices.openUrl(url)
-        except Exception:
-            print(traceback.format_exc())
-
-    def handle_show_prompt(self, state: Qt.CheckState):
-        # _ = self.prompt.show() if state == Qt.CheckState.Checked else self.prompt.hide()
-        _ = (
-            self.prompt.setEnabled(True)
-            if state == Qt.CheckState.Checked
-            else self.prompt.setEnabled(False)
-        )
-
-        if state == Qt.CheckState.Checked:
-            self.prompt.setText(DEFAULT_GUIDELINES)
-        else:
-            self.prompt.setText("")
-
-    def browse_directory(self, type):
-        try:
-            if type == 0:
-                download_dir = QStandardPaths.writableLocation(
-                    QStandardPaths.StandardLocation.DownloadLocation
-                )
-                file_path, _ = QFileDialog.getOpenFileName(
-                    None, "Select a File", download_dir, "*.pdf"
-                )
-            else:
-                directory = QFileDialog.getExistingDirectory(self, "Select Directory")
-
-            if type == 0:
-                self.path_edit_file.setText(file_path)
-            elif type == 1:
-                if not (directory is None or len(directory) == 0):
-                    self.path_edit_save.setText(directory)
-        except Exception:
-            print(traceback.format_exc())
-
-    def save_data(self):
-        path = self.path_edit_save.text()
-        if not path:
-            QMessageBox.critical(self, "Error", "Please select a save location!")
-            return
-
-        if not os.path.exists(path):
-            try:
-                os.makedirs(path, exist_ok=True)
-            except Exception as e:
-                QMessageBox.critical(
-                    self, "Error", f"Could not create directory: {str(e)}"
-                )
-                return
-
-        self.process()
-
-    @pyqtSlot()
-    def process(self):
-        self.setEnabled(False)
+    def generate(self):
+        if self.scan_stop_btn.data == "scanning":
+            self.view_model.handle_stream_stop(True)
+            self.scan_stop_btn.setEnabled(False)
+            return 
+        
+        self.generate_doc_btn.setEnabled(False)
+        self.stream_card.chatbox.setPlainText("")
         try:
             data = GenerateDocData(
-                url=self.url_edit.text(),
-                # port=self.port_edit.text(),
-                pdf_path=self.path_edit_file.text(),
-                save_path=self.path_edit_save.text(),
-                is_reply_included=self.include_reply_checkbox.isChecked(),
-                selected_template=TemplateType(self.combo.currentText()),
-                is_custom_prompt=self.custom_prompt.isChecked(),
-                custom_prompt=self.prompt.toPlainText(),
-                model=self.assisant.currentText()
+                url=self.api_url.data,
+                pdf_path=self.file_button.data,
+                save_path=self.save_location_btn.data,
+                is_reply_included=self.include_reply.isChecked(),
+                selected_template=TemplateType(self.template_combobox.currentText()),
+                is_custom_prompt=False,
+                custom_prompt="",
             )
-            success, e = self.viewmodel.main_handler(data)
-            if not success:
-                raise RuntimeError(f"Error occured: {e}")
+            self.view_model.main_handler(data)
+            self.stream_card.chatbox.setPlainText("Preparing... ")
+            self.scan_stop_btn.data = "scanning" 
+            self.scan_stop_btn.setText("Stop")
         except Exception as e:
             print(traceback.format_exc())
-            QMessageBox.critical(self, "Error", str(e))
-        finally:
-            self.setEnabled(True)
+            self.show_message_box("Error", f"{e}")
 
-    @pyqtSlot(UpdateDocData, str)
-    def _update_doc_status_list(self, doc_status: UpdateDocData, id: str):
-        widget: CustomListItem = self.viewmodel.get_widget(id)
-        try:
-            doc_status.validate()
-            if widget is not None:
-                status, name = self.viewmodel._format_doc_status_name(
-                    id=id,
-                    status=doc_status.status,
-                )
-                widget.set_status_color("Normal")
-                if doc_status.status == "Done":
-                    widget.button.setEnabled(True)
+    def generate_events(self, doc: UpdateDocData, id: str):
+        if doc.status == "Done":
+            self.generate_doc_btn.setEnabled(True)
+            pass
+            
+        if doc.error:
+            self.generate_doc_btn.setEnabled(True)
+            self.show_message_box("Error", str(doc.error))
+    
+    def update_chatbox(self, text: str):
+        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
+        self.stream_card.chatbox.insertPlainText(text)
 
-                widget.status.setText(status)
-                widget.name.setText(name)
+    @pyqtSlot(StateLLM)
+    def update_assistant_status(self, state: StateLLM):
+        print(f"Your Assistant is {state.value}")
 
-                if doc_status.error:
-                    QMessageBox.critical(self, "Error", str(doc_status.error))
-                    widget.set_status_color("Error")
-                    raise RuntimeError(f"{doc_status.error}")
-            else:
-                self._add_doc_status_list(doc_status=doc_status, id=id)
-        except Exception:
-            widget.status.setText("[Error]:")
-            widget.set_status_color("Error")
-            widget.button.setEnabled(False)
-            err = doc_status.error if doc_status.error is not None else traceback.format_exc()
-            QMessageBox.critical(self, "Error", str(err))
+    @pyqtSlot(bool)
+    def _finished(self, state):
+        if state is True:
+            self.scan_stop_btn.setText("Scan PDF")
+            self.scan_stop_btn.data = "not-scanning"
+            self.generate_doc_btn.setEnabled(True)
 
-    def _add_doc_status_list(self, doc_status: UpdateDocData, id: str):
-        try:
-            doc_status.validate()
-            item = QListWidgetItem()
+    @pyqtSlot(bool)
+    def _stream_stopped_success(self, state):
+        if state is not True:
+            self.show_message_box("Error", "RESTART THE APP")
+            return
+        
+        self.scan_stop_btn.data = 'not-scanning'
+        self.scan_stop_btn.setText("Scan PDF")
+        self.scan_stop_btn.setEnabled(True)
 
-            status, name = self.viewmodel._format_doc_status_name(
-                id=id,
-                status=doc_status.status,
-            )
-
-            custom_widget = CustomListItem(status=status, name=name, id=id)
-            custom_widget.set_status_color("Waiting")
-            custom_widget.button.setEnabled(False)
-            custom_widget.button.setIcon(QIcon("icons:open-file.svg"))
-            custom_widget.button.clicked.connect(
-                lambda checked, id=id: self.viewmodel.open_document(id)
-            )
-            item.setSizeHint(custom_widget.sizeHint())
-            self.list_widget.insertItem(0, item)
-            self.list_widget.setItemWidget(item, custom_widget)
-
-            self.viewmodel.doc_ui_map[custom_widget.id] = (item, custom_widget)
-        except Exception:
-            print(traceback.format_exc())
-
-    @pyqtSlot(str, Any)
-    def _doc_opened(self, id, err):
-        try:
-            widget: CustomListItem = self.viewmodel.get_widget(id)
-            if isinstance(err, Exception):
-                widget.set_status_color("Error")
-                widget.status.setText("[File Missing]:")
-                widget.button.setEnabled(False)
-                QMessageBox.critical(self, "Error", str(err))
-        except Exception as e:
-            print(f"{e}: {traceback.format_exc()}")
-
-    # ----built-in-----
-    def closeEvent(self, a0):
-        try:
-            self.settings_vm.save_window_geometry(self.size(), self.pos())
-            self.settings_vm.save_settings()
-            a0.accept()
-        except Exception:
-            print(traceback.format_exc())
-        finally:
-            return super().closeEvent(a0)
+    @pyqtSlot(object)
+    def _cloud_llm_error(self, err):
+        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
+        self.stream_card.chatbox.insertPlainText("\nOppsss...Something went wrong on my end.")
+        self.generate_doc_btn.setEnabled(True)
+    
+    def closeEvent(self, e):
+        self.view_model.stop_agents()
+        return super().closeEvent(e)
 
 
 def register_search_path(relative_path=None):
@@ -406,20 +778,13 @@ def register_search_path(relative_path=None):
     QDir.addSearchPath("icons", os.path.join(relative_path, "resource", "icons"))
 
 
-def main():
-    app = QApplication(sys.argv)
+if __name__ == "__main__":
     register_search_path()
-
-    window = MainWindow(MainViewModel(Data()))
-
-    window.setWindowFlags(window.windowFlags())
-    window.show()
-    window.raise_()
-    window.activateWindow()
-
+    app = QApplication(sys.argv)
+    window = Window()
+    # title_bar = FluentTitleBar(window)
+    # title_bar.setTitle("OrDraft")
+    # title_bar.setIcon("icons:app.icon.svg")
+    # window.setTitleBar(titleBar=title_bar)
     window.show()
     sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
