@@ -358,11 +358,12 @@ class Window(FluentWindow):
     def _load_config(self):
         try:
             file_path = "config.json"
-            if not os.path.exists(file_path):
-                with open(file_path, "w") as file:
+            config_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", file_path)
+            if not os.path.exists(config_path):
+                with open(config_path, "w") as file:
                     file.write("")
 
-            qconfig.load("config.json", self.cfg)
+            qconfig.load(config_path, self.cfg)
             self._load_theme()
         except Exception:
             print(traceback.format_exc())
