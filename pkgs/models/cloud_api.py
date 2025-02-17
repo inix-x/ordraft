@@ -288,7 +288,21 @@ class HuggingFaceAPI(QObject):
         }
         self._llm_endpoint = None
         self._llm_model = None
+        self._llm_endpoint_state: StateLLM = None        
 
+    @property
+    def llm_state(self) -> StateLLM:
+        if self._llm_endpoint_state is None:
+            self._llm_endpoint_state = self.get_llm_state()
+
+        return self._llm_endpoint_state
+
+    @llm_state.setter
+    def llm_state(self, state: StateLLM):
+        if self._llm_endpoint_state != state and \
+            isinstance(state, StateLLM):
+            self._llm_endpoint_state = state
+        
     @property
     def llm_endpoint(self):
         return self._llm_endpoint
@@ -357,6 +371,49 @@ class HuggingFaceAPI(QObject):
             raise TypeError("url provided not a valid")
 
         self.llm_endpoint = url
+
+    def resume_llm_endpoint(self):
+        res = {}
+        success = True
+        try:
+            url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/resume"
+            response = requests.post(url, headers=self._headers, timeout=300)
+            response.raise_for_status()
+
+            res = response.json()
+        except requests.RequestException as e:
+            print(f"Error occurred during API request: {e}")
+            success = False
+            res = e
+        except Exception as e:
+            print(f"Error occurred during API request: {e}")
+            success = False
+            res = e
+        finally:
+            return success, res
+
+    def start_llm_service(self):
+        if self.llm_state in [StateLLM.Running, 
+            StateLLM.Pending, StateLLM.Updating]:
+            self.llm_state_changed.emit(self.llm_state)
+            return
+        
+        success, res = self.resume_llm_endpoint()
+
+        if success is False:
+            return success, res
+        
+        status:dict = res.get("status")
+        state = status.get("state")
+
+        if state not in StateLLM._value2member_map_:
+            raise ValueError(f"State is not valid {state}")
+            
+        state_enum = StateLLM(state)
+        self.llm_state = state_enum
+        self.llm_state_changed.emit(state_enum)
+        
+        return success, res
 
     # -----Private-----
     def _get_endpoint_information(self) -> tuple[bool, dict]:

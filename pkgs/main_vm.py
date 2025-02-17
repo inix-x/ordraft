@@ -107,6 +107,7 @@ class MainViewModel(QObject):
         except Exception as ve:
             print(traceback.format_exc())
             self.errorOccured.emit(str(ve))
+            self.llm_state_changed.emit(self._cloud_llm.hugging_face_api.llm_state)
             return False, ve
         try:
             self.word_processor.template_filepath = template_filepath
@@ -114,10 +115,9 @@ class MainViewModel(QObject):
             if self._cloud_llm.hugging_face_api.get_llm_state() == StateLLM.Running:
                 self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
             else:
-                raise RuntimeError("LLM is not running. Contact Admin")
+                raise RuntimeError("LLM is not running. Start the LLM Service via Settings")
             return True, None
         except Exception as e:
-            print(traceback.format_exc())
             self.errorOccured.emit(str(e))
             return False, e
 
@@ -323,3 +323,11 @@ class MainViewModel(QObject):
     @pyqtSlot(bool)
     def handle_stream_stop(self, state):
         self._cloud_llm.stop()
+
+    @pyqtSlot()
+    def handle_llm_service(self):
+        if self._cloud_llm.hugging_face_api.llm_state != \
+            StateLLM.Running:
+            self._cloud_llm.hugging_face_api.start_llm_service()
+        else:
+            print("Your Assistant is already Running")

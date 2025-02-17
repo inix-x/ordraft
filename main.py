@@ -342,6 +342,7 @@ class Window(FluentWindow):
         self.view_model.llm_state_changed.connect(self.update_assistant_status)
         self.view_model.llm_stream_finished.connect(self._finished)
         self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
+        self.view_model.errorOccured.connect(self._handle_error)
 
         self.initNavigation()
         self.initWindow()
@@ -358,12 +359,12 @@ class Window(FluentWindow):
     def _load_config(self):
         try:
             file_path = "config.json"
-            config_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", file_path)
-            if not os.path.exists(config_path):
-                with open(config_path, "w") as file:
+            # config_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", file_path)
+            if not os.path.exists(file_path):
+                with open(file_path, "w") as file:
                     file.write("")
 
-            qconfig.load(config_path, self.cfg)
+            qconfig.load(file_path, self.cfg)
             self._load_theme()
         except Exception:
             print(traceback.format_exc())
@@ -399,17 +400,16 @@ class Window(FluentWindow):
         self.setWindowTitle("OrDraft")
 
     def settings_setup_ui(self):
-        """asd"""
         # UI
         # UI: APP
         app_settings = SubtitleLabel("App", self)
         setFont(app_settings, 18)
-        self.api_url = CustomPushSettingCard(
-            text="Change",
-            icon=CFIF.URL,
-            title="API",
-            content="DO NOT CHANGE. Unless the API url supports OpenAI-like endpoints",
-            data=URL,
+        
+        self.start_llm_service = CustomPushSettingCard(
+            text="Start",
+            icon=FIF.FOLDER,
+            title="Start the LLM Service",
+            content="If the LLM service is paused or scaled to zero, click this button to resume it.",
             parent=self,
         )
         self.template_dir = CustomPushSettingCard(
@@ -436,6 +436,18 @@ class Window(FluentWindow):
             content="Set the background of the views to transparent",
             configItem=self.cfg.transparent_bg,
         )
+        self.api_url = CustomPushSettingCard(
+            text="Change",
+            icon=CFIF.URL,
+            title="API",
+            content="DO NOT CHANGE. Unless the API url supports OpenAI-like endpoints",
+            data=URL,
+            parent=self,
+        )
+
+        # UI: Development
+        development = SubtitleLabel("Development", self)
+        setFont(development, 18)
 
         # Initial Values
         dark_theme.switchButton.setChecked(self.cfg.darkTheme.value)
@@ -444,6 +456,7 @@ class Window(FluentWindow):
         # Connections: App
         self.api_url.button.clicked.connect(self._show_change_api_url)
         self.template_dir.button.clicked.connect(self.show_template_dir)
+        self.start_llm_service.button.clicked.connect(self.view_model.handle_llm_service)
 
         # Connections: Aeshethics
         dark_theme.switchButton.checkedChanged.connect(
@@ -457,7 +470,7 @@ class Window(FluentWindow):
             app_settings, alignment=Qt.AlignmentFlag.AlignTop
         )
         self.settings_interface.vBoxlayout.addWidget(
-            self.api_url, alignment=Qt.AlignmentFlag.AlignTop
+            self.start_llm_service, alignment=Qt.AlignmentFlag.AlignTop
         )
         self.settings_interface.vBoxlayout.addWidget(
             self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
@@ -471,6 +484,14 @@ class Window(FluentWindow):
         )
         self.settings_interface.vBoxlayout.addWidget(
             transparent, alignment=Qt.AlignmentFlag.AlignTop
+        )
+
+        # layout: Development
+        self.settings_interface.vBoxlayout.addWidget(
+            development, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            self.api_url, alignment=Qt.AlignmentFlag.AlignTop
         )
 
     def _change_visual(self, *args, **kwargs):
@@ -716,10 +737,13 @@ class Window(FluentWindow):
                 is_custom_prompt=False,
                 custom_prompt="",
             )
-            self.view_model.main_handler(data)
-            self.stream_card.chatbox.setPlainText("Preparing... ")
-            self.scan_stop_btn.data = "scanning" 
-            self.scan_stop_btn.setText("Stop")
+            success, e = self.view_model.main_handler(data)
+            
+            if success is True:
+                self.stream_card.chatbox.setPlainText("Preparing... ")
+                self.scan_stop_btn.data = "scanning" 
+                self.scan_stop_btn.setText("Stop")
+                
         except Exception as e:
             print(traceback.format_exc())
             self.show_message_box("Error", f"{e}")
@@ -740,6 +764,12 @@ class Window(FluentWindow):
     @pyqtSlot(StateLLM)
     def update_assistant_status(self, state: StateLLM):
         print(f"Your Assistant is {state.value}")
+        if state == StateLLM.Running:
+            self.start_llm_service.button.setText(StateLLM.Running.value)
+            self.start_llm_service.button.setEnabled(False)
+        else:
+            self.start_llm_service.button.setText("Start")
+            self.start_llm_service.button.setEnabled(True)
 
     @pyqtSlot(bool)
     def _finished(self, state):
@@ -757,6 +787,12 @@ class Window(FluentWindow):
         self.scan_stop_btn.data = 'not-scanning'
         self.scan_stop_btn.setText("Scan PDF")
         self.scan_stop_btn.setEnabled(True)
+
+    @pyqtSlot(str)
+    def _handle_error(self, err):
+        self.show_message_box("Error", err)
+        self.stream_card.chatbox.setPlainText("")
+        self.scan_stop_btn.setText("Scan PDF")
 
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
