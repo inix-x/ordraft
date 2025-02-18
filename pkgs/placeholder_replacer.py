@@ -1,10 +1,7 @@
 import os
-import sys
 import traceback
-import markdown2
-from pathlib import Path
 from docxtpl import DocxTemplate
-from pkgs.dataclass import DocPayload, Document
+from pkgs.dataclass import Document
 from pkgs.misc import Utils
 
 class WordPlaceholderReplacer:

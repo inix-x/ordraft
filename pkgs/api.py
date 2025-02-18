@@ -7,13 +7,13 @@ import pdfplumber
 import re
 import queue
 
-from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.config import DISMISSAL_DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, IMPORTANT_PROMPT
-from pkgs.dataclass import DocPayload, Document
+from pkgs.dataclass import Document
 
 
 class ModelLLM(QObject):
