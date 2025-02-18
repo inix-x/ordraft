@@ -3,7 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QThreadPool
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
@@ -14,7 +14,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
 
 from pkgs.workers import AgentWorker, BackgroundWorker
 from pkgs.models import CloudLLM, StateLLM
-from pkgs.api import ApiWorker, ModelLLM
+from pkgs.api import ModelLLM
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.dataclass import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
 from pkgs.misc import Data
@@ -222,14 +222,14 @@ class MainViewModel(QObject):
         
     def setup_agents(self):
         
-        self._api_worker_thread = QThread()
-        self._api_worker = ApiWorker(ModelLLM())
-        self._api_worker.moveToThread(self._api_worker_thread)
-        self._api_worker.statusChanged.connect(self._handle_status_changed)
-        self._api_worker.finished.connect(self._api_worker_thread.quit)
+        # self._api_worker_thread = QThread()
+        # self._api_worker = ApiWorker(ModelLLM())
+        # self._api_worker.moveToThread(self._api_worker_thread)
+        # self._api_worker.statusChanged.connect(self._handle_status_changed)
+        # self._api_worker.finished.connect(self._api_worker_thread.quit)
 
-        self._api_worker_thread.started.connect(self._api_worker.run)
-        self._api_worker_thread.start()
+        # self._api_worker_thread.started.connect(self._api_worker.run)
+        # self._api_worker_thread.start()
 
         self._cloud_llm_worker_thread = QThread()
         self._cloud_llm_worker = AgentWorker()
