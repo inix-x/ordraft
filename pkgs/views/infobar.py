@@ -3,7 +3,7 @@ import os
 import sys
 from typing import Union
 
-from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtCore import QPoint, Qt, pyqtSlot
 from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout
 
 from qfluentwidgets import (
@@ -50,33 +50,8 @@ class InfoBars(QWidget):
 
     def __init__(self):
         super().__init__()
-        setTheme(Theme.DARK)
 
-        self.hBoxLayout = QHBoxLayout(self)
-        self.button1 = PushButton("Information", self)
-        self.button2 = PushButton("Success", self)
-        self.button3 = PushButton("Warning", self)
-        self.button4 = PushButton("Error", self)
-        self.button5 = PushButton("Custom", self)
-        self.button6 = PushButton("Desktop", self)
-
-        self.button1.clicked.connect(self.createInfoInfoBar)
-        self.button2.clicked.connect(self.createSuccessInfoBar)
-        self.button3.clicked.connect(self.createWarningInfoBar)
-        self.button4.clicked.connect(self.createErrorInfoBar)
-        self.button5.clicked.connect(self.createCustomInfoBar)
-        self.button6.clicked.connect(self.createDeskTopBottomRightInfoBar)
-
-        self.hBoxLayout.addWidget(self.button1)
-        self.hBoxLayout.addWidget(self.button2)
-        self.hBoxLayout.addWidget(self.button3)
-        self.hBoxLayout.addWidget(self.button4)
-        self.hBoxLayout.addWidget(self.button5)
-        self.hBoxLayout.addWidget(self.button6)
-        self.hBoxLayout.setContentsMargins(30, 0, 30, 0)
-
-        self.resize(700, 700)
-
+    @pyqtSlot(str, str, int)
     def createInfoInfoBar(self, title: str, content: str, duration: int = -1):
         """Create Information bar
 
@@ -98,6 +73,7 @@ class InfoBars(QWidget):
         w.addWidget(PushButton("Action"))
         w.show()
 
+    @pyqtSlot(str, str, int)
     def createSuccessInfoBar(self, title: str, content: str, duration: int = -1):
         """Create Success bar
 
@@ -118,6 +94,7 @@ class InfoBars(QWidget):
             parent=self,
         )
 
+    @pyqtSlot(str, str, int)
     def createWarningInfoBar(self, title: str, content: str, duration: int = -1):
         """Creates Warning bar
 
@@ -136,6 +113,7 @@ class InfoBars(QWidget):
             parent=self,
         )
 
+    @pyqtSlot(str, str, int)
     def createErrorInfoBar(self, title: str, content: str, duration: int = -1):
         """Create error bar
 
@@ -154,6 +132,7 @@ class InfoBars(QWidget):
             parent=self,
         )
 
+    @pyqtSlot(str, str, Union[FluentIcon, FluentIconBase, MyFluentIcon], int)
     def createCustomInfoBar(
         self,
         title: str,
