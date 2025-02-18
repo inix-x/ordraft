@@ -18,6 +18,7 @@ from pkgs.list_widget import CustomListItem
 from pkgs.handlers import SettingsViewModel
 from pkgs.models import SettingsModel, CloudLLM, StateLLM
 from pkgs.workers import AgentWorker, BackgroundWorker
+from pkgs.views import InfoBars
 
 __all__ = [
     "Models",

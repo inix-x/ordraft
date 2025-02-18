@@ -34,6 +34,7 @@ class MainViewModel(QObject):
 
     chatbox_update = pyqtSignal(str)
 
+    llm_state_checked = pyqtSignal(StateLLM)
     llm_state_changed = pyqtSignal(StateLLM)
     llm_stream_finished = pyqtSignal(bool)
     stream_stopped_sucess = pyqtSignal(bool)
@@ -61,6 +62,7 @@ class MainViewModel(QObject):
 
         # API
         self._cloud_llm.hugging_face_api.llm_state_changed.connect(self._update_llm_state)
+        self._cloud_llm.hugging_face_api.llm_state_checked.connect(self._llm_state_checked)
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
@@ -68,6 +70,19 @@ class MainViewModel(QObject):
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
         self._cloud_llm.stream_stopped.connect(self._stream_stopped_success)
+        
+        self._llm_state: StateLLM = None
+        
+    @property
+    def assistant_state(self) -> StateLLM:
+        if self._llm_state is None:
+            self._llm_state = self._cloud_llm.hugging_face_api.llm_state
+        return self._llm_state
+
+    @assistant_state.setter
+    def assistant_state(self, state: StateLLM):
+        if self.assistant_state != state:
+            self.assistant_state = state
         
     @property
     def documents(self) -> DocumentsCollection:
@@ -166,7 +181,9 @@ class MainViewModel(QObject):
             )
             self.docEvents.emit(doc_status, doc.id)
         finally:
-            self._api_worker.allow_next_task()
+            self._cloud_llm_worker.allow_next_task()
+            # self._api_worker.allow_next_task()
+            pass
     
     @pyqtSlot(str)
     def _update_chat_box(self, text_chunk):
@@ -243,8 +260,8 @@ class MainViewModel(QObject):
 
     def stop_agents(self):
         """Stop the worker and wait for the thread to finish."""
-        self._api_worker.stop()
-        self._api_worker_thread.quit()
+        # self._api_worker.stop()
+        # self._api_worker_thread.quit()
         # self._api_worker_thread.wait()
 
         
@@ -314,7 +331,14 @@ class MainViewModel(QObject):
     
     @pyqtSlot(StateLLM)
     def _update_llm_state(self, state: StateLLM):
-        self.llm_state_changed.emit(state)
+        if self._llm_state != state:
+            self._llm_state = state
+            self.llm_state_changed.emit(state)
+
+    @pyqtSlot(StateLLM)
+    def _llm_state_checked(self, state: StateLLM):
+        if self._llm_state != state:
+            self.llm_state_checked.emit(state)
 
     @pyqtSlot(object)
     def _handle_error(self, err: object):
@@ -326,8 +350,14 @@ class MainViewModel(QObject):
 
     @pyqtSlot()
     def handle_llm_service(self):
-        if self._cloud_llm.hugging_face_api.llm_state != \
+        if self.assistant_state != \
             StateLLM.Running:
             self._cloud_llm.hugging_face_api.start_llm_service()
         else:
             print("Your Assistant is already Running")
+
+        self.llm_state_checked.emit(self.assistant_state)
+    
+    def stop_llm_service(self):
+        if self.assistant_state == StateLLM.Running:
+            self._cloud_llm.hugging_face_api.stop_llm_service()

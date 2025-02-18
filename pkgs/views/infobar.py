@@ -1,7 +1,7 @@
 # coding:utf-8
 import os
 import sys
-from typing import Union
+from typing import Union, Any
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSlot
 from PyQt6.QtWidgets import QApplication, QWidget, QHBoxLayout
@@ -48,11 +48,11 @@ class CustomInfoBarManager(InfoBarManager):
 
 class InfoBars(QWidget):
 
-    def __init__(self):
+    def __init__(self, parent = None):
         super().__init__()
 
     @pyqtSlot(str, str, int)
-    def createInfoInfoBar(self, title: str, content: str, duration: int = -1):
+    def createInfoInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
         """Create Information bar
 
         Args:
@@ -67,14 +67,15 @@ class InfoBars(QWidget):
             orient=Qt.Orientation.Vertical,  # vertical layout
             isClosable=True,
             position=InfoBarPosition.TOP_RIGHT,
+            # position='Custom',
             duration=duration,
-            parent=self,
+            parent=w,
         )
-        w.addWidget(PushButton("Action"))
         w.show()
+        return w
 
     @pyqtSlot(str, str, int)
-    def createSuccessInfoBar(self, title: str, content: str, duration: int = -1):
+    def createSuccessInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
         """Create Success bar
 
         Args:
@@ -91,11 +92,13 @@ class InfoBars(QWidget):
             position=InfoBarPosition.TOP_RIGHT,
             # position='Custom',   # NOTE: use custom info bar manager
             duration=duration,
-            parent=self,
+            parent=w,
         )
+        w.show()
+        return w
 
     @pyqtSlot(str, str, int)
-    def createWarningInfoBar(self, title: str, content: str, duration: int = -1):
+    def createWarningInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
         """Creates Warning bar
 
         Args:
@@ -110,11 +113,13 @@ class InfoBars(QWidget):
             isClosable=False,  # disable close button
             position=InfoBarPosition.TOP_RIGHT,
             duration=duration,
-            parent=self,
+            parent=w,
         )
+        w.show()
+        return w
 
     @pyqtSlot(str, str, int)
-    def createErrorInfoBar(self, title: str, content: str, duration: int = -1):
+    def createErrorInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
         """Create error bar
 
         Args:
@@ -129,12 +134,15 @@ class InfoBars(QWidget):
             isClosable=True,
             position=InfoBarPosition.TOP_RIGHT,
             duration=duration,
-            parent=self,
+            parent=w,
         )
+        w.show()
+        return w
 
-    @pyqtSlot(str, str, Union[FluentIcon, FluentIconBase, MyFluentIcon], int)
+    @pyqtSlot(str, str, Any, int)
     def createCustomInfoBar(
         self,
+        w: QWidget,
         title: str,
         content: str,
         icon: Union[FluentIcon, FluentIconBase, MyFluentIcon] = None,
@@ -149,7 +157,7 @@ class InfoBars(QWidget):
         """    
         if isinstance(icon, None):
             raise TypeError("icon is type of None")
-        w = InfoBar.new(
+        bar = InfoBar.new(
             icon=icon,
             title=title,
             content=content,
@@ -157,9 +165,11 @@ class InfoBars(QWidget):
             isClosable=True,
             position=InfoBarPosition.TOP_RIGHT,
             duration=duration,
-            parent=self,
+            parent=w,
         )
-        w.setCustomBackgroundColor("white", "#202020")
+        bar.setCustomBackgroundColor("white", "#202020")
+        bar.show()
+        return bar
 
 
 if __name__ == "__main__":

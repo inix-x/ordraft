@@ -274,6 +274,7 @@ class ModelLLM(QObject):
 class HuggingFaceAPI(QObject):
     llm_state_changed = pyqtSignal(StateLLM)
     error_occured = pyqtSignal(object)
+    llm_state_checked = pyqtSignal(StateLLM)
 
     def __init__(self):
         super().__init__()
@@ -394,7 +395,30 @@ class HuggingFaceAPI(QObject):
     def start_llm_service(self):
         if self.llm_state in [StateLLM.Running, 
             StateLLM.Pending, StateLLM.Updating]:
-            self.llm_state_changed.emit(self.llm_state)
+            self.llm_state_checked.emit(self.llm_state)
+            return
+        
+        success, res = self.resume_llm_endpoint()
+
+        if success is False:
+            return success, res
+        
+        status:dict = res.get("status")
+        state = status.get("state")
+
+        if state not in StateLLM._value2member_map_:
+            raise ValueError(f"State is not valid {state}")
+            
+        state_enum = StateLLM(state)
+        self.llm_state = state_enum
+        self.llm_state_changed.emit(state_enum)
+        
+        return success, res
+
+    def stop_llm_service(self):
+        if self.llm_state not in [StateLLM.Running, 
+            StateLLM.Pending, StateLLM.Updating, StateLLM.Initializing]:
+            self.llm_state_checked.emit(self.llm_state)
             return
         
         success, res = self.resume_llm_endpoint()

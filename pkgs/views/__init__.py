@@ -1,3 +1,3 @@
-from infobar import InfoBars
+from .infobar import InfoBars
 
 __all__ = ["InfoBars"]
