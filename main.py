@@ -10,47 +10,38 @@ from typing import Union
 
 
 from PyQt6.QtCore import (
-    Qt, QObject, QDir, Qt, QUrl,
-    QPropertyAnimation, QStandardPaths, QSize, pyqtSlot
+    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot
 )
 from PyQt6.QtWidgets import (
-    QFrame, QApplication, QVBoxLayout,
-    QHBoxLayout, QWidget, QSplitter,
-    QListWidget, QSplitterHandle, QGraphicsOpacityEffect,
-    QSizePolicy, QFileDialog, QLabel, QSpacerItem
+    QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
+    QSizePolicy, QFileDialog, QSpacerItem
 )
-from PyQt6.QtGui import QIcon, QColor, QPainter, QPainterPath, QDesktopServices
+from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices
 
 from qfluentwidgets import (
     NavigationItemPosition, FluentWindow, SubtitleLabel, setFont, QConfig,
     SwitchSettingCard, qconfig, StyleSheetBase, Theme, setTheme,
-    setThemeColor, AvatarWidget, SingleDirectionScrollArea, PushButton, ElevatedCardWidget,
-    ImageLabel, CaptionLabel, CardWidget, SettingCard, ScrollArea,
-    themeColor, isDarkTheme, ListWidget, IconWidget,
-    BodyLabel, TransparentToolButton, PlainTextEdit, ComboBox,
-    CheckBox, MessageBox, MessageBoxBase, LineEdit,
+    setThemeColor, PushButton,CaptionLabel, CardWidget,
+    isDarkTheme, IconWidget, BodyLabel, TransparentToolButton, 
+    PlainTextEdit, ComboBox,
+    CheckBox, MessageBoxBase, LineEdit,
     PushSettingCard,
 )
 from qfluentwidgets.common import (
-    ConfigItem, BoolValidator, ColorValidator,
-    FluentStyleSheet, FluentIconBase,
+    ConfigItem, BoolValidator, FluentIconBase,
 )
-from qfluentwidgets.components.settings.setting_card import SettingIconWidget
 from qfluentwidgets import FluentIcon as FIF
 
 
 from pkgs.icons import MyFluentIcon as CFIF
 
 
-from pkgs import MainViewModel, Data
-
 from pkgs import (
-    URL, DISMISSAL_DEFAULT_GUIDELINES, TemplateType, MainViewModel,
-    GenerateDocData, Data, UpdateDocData, CustomListItem,
-    Utils, Models,
+    URL, TemplateType, MainViewModel,
+    GenerateDocData, Data, UpdateDocData
 )
 
-from pkgs import SettingsViewModel, SettingsModel, StateLLM
+from pkgs import StateLLM
 # fmt: on
 
 

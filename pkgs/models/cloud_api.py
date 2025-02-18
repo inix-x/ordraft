@@ -6,16 +6,12 @@ import json
 import requests
 import pdfplumber
 import re
-import queue
-import time
 
 from enum import Enum
 from httpx import URL
 from openai import OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from PyQt6.QtCore import (
-    QObject, QThread, pyqtSignal, pyqtSlot,
-    QWaitCondition, QMutex, QMutexLocker,
+    QObject, pyqtSignal
 )
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
@@ -30,8 +26,8 @@ from pkgs.config import (
     IMPORTANT_PROMPT,
     SYSTEM_PROMPT,
 )
-from pkgs.dataclass import DocPayload, Document
-from pkgs.config import ORDRAFT_ADMIN, ORDRAFT_USER
+from pkgs.dataclass import Document
+from pkgs.config import ORDRAFT_ADMIN
 from pkgs.enums import TemplateType
 
 # fmt: on
