@@ -22,13 +22,17 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.config import (
-    DEFAULT_GUIDELINES,
+    DISMISSAL_DEFAULT_GUIDELINES,
+    RESO_DEFAULT_GUIDELINES,
+    RESO_TEMPLATE,
+    DISMISSAL_TEMPLATE,
     DEFAULT_INSTRUCTIONS,
     IMPORTANT_PROMPT,
     SYSTEM_PROMPT,
 )
 from pkgs.dataclass import DocPayload, Document
 from pkgs.config import ORDRAFT_ADMIN, ORDRAFT_USER
+from pkgs.enums import TemplateType
 
 # fmt: on
 
@@ -82,7 +86,9 @@ class ModelLLM(QObject):
             pdf_text=pdf_text,
             custom_prompt=data.temp_doc_data.custom_prompt,
             model=data.doc_payload.model.value,
+            template_type=data.temp_doc_data.selected_template
         )
+        print(payload)
         data.doc_payload.status = "Analyzing"
         self.statusChanged.emit(data)
 
@@ -173,7 +179,7 @@ class ModelLLM(QObject):
             print(f"Error occurred while extracting text: {e}")
             return None
 
-    def _build_payload(self, custom_prompt: str, pdf_text: str, model: str):
+    def _build_payload(self, custom_prompt: str, pdf_text: str, model: str, template_type: TemplateType):
         """
         Constructs the payload to be sent to the API for extracting structured information.
 
@@ -185,22 +191,18 @@ class ModelLLM(QObject):
         Returns:
             dict: The JSON payload as a dictionary.
         """
-        # new: Define the JSON template for the extracted information
-        template = """
-        {
-            "client_name": "",
-            "location": "",
-            "case_number": "",
-            "date_of_inspection": "",
-            "violations": [
-                "",
-                "",
-                ""
-            ]
-        }
-        """
         # Choose custom prompt if available, otherwise default guidelines
-        guidelines = custom_prompt if custom_prompt else DEFAULT_GUIDELINES
+        guidelines = None
+        template = None
+        if template_type in [TemplateType.RESO_AIR, 
+            TemplateType.RESO_WATER, TemplateType.DISMISSAL_HW, TemplateType.DISMISSAL_PD]:
+            guidelines = RESO_DEFAULT_GUIDELINES
+            template = RESO_TEMPLATE
+        else:
+            guidelines = DISMISSAL_DEFAULT_GUIDELINES
+            template = DISMISSAL_TEMPLATE
+        
+        guidelines = f"{guidelines} \n {custom_prompt}" if custom_prompt else guidelines
 
         user_prompt = f"""
         **TASK**  
@@ -209,6 +211,7 @@ class ModelLLM(QObject):
         {DEFAULT_INSTRUCTIONS}
         
         {IMPORTANT_PROMPT}
+        
         {guidelines}
         
         **TEMPLATE (DO NOT MODIFY THE KEYS)**
@@ -533,13 +536,23 @@ class CloudLLM(QObject):
             ]
         }
         """
+        guidelines = None
+        template = None
+        if data.temp_doc_data.selected_template in [TemplateType.RESO_AIR, 
+            TemplateType.RESO_WATER, TemplateType.DISMISSAL_HW, TemplateType.DISMISSAL_PD]:
+            guidelines = RESO_DEFAULT_GUIDELINES
+            template = RESO_TEMPLATE
+        else:
+            guidelines = DISMISSAL_DEFAULT_GUIDELINES
+            template = DISMISSAL_TEMPLATE
+        
         user_prompt = f"""
         **TASK**  
         Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
 
         {DEFAULT_INSTRUCTIONS}
         {IMPORTANT_PROMPT}
-        {DEFAULT_GUIDELINES}
+        {guidelines}
         
         **TEMPLATE (DO NOT MODIFY THE KEYS)**
         Template:

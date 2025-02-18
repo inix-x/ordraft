@@ -12,7 +12,7 @@ from PyQt6.QtCore import QObject, QThread, pyqtSignal, pyqtSlot, QWaitCondition,
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from pkgs.config import DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, IMPORTANT_PROMPT
+from pkgs.config import DISMISSAL_DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, IMPORTANT_PROMPT
 from pkgs.dataclass import DocPayload, Document
 
 
@@ -166,7 +166,7 @@ class ModelLLM(QObject):
         }
         """
         # Choose custom prompt if available, otherwise default guidelines
-        guidelines = custom_prompt if custom_prompt else DEFAULT_GUIDELINES
+        guidelines = custom_prompt if custom_prompt else DISMISSAL_DEFAULT_GUIDELINES
 
         user_prompt = f"""
         **TASK**  

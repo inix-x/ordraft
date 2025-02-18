@@ -1,9 +1,11 @@
 import os
 import sys
 import traceback
+import markdown2
 from pathlib import Path
 from docxtpl import DocxTemplate
-
+from docx.oxml import OxmlElement
+from docx import Document as DocFormatter
 from pkgs.dataclass import DocPayload, Document
 from pkgs.misc import Utils
 
@@ -62,23 +64,26 @@ class WordPlaceholderReplacer:
             document.doc_payload.error_occured = e
             return document
 
-    def _replace_placeholders(self, replacements):
+    def _replace_placeholders(self, replacements: dict):
         """
         Replaces placeholders in the Word document using the provided replacements dictionary.
 
         Args:
             replacements (dict): A dictionary where keys are placeholder names.
         """
-        # print(type(replacements))
-        # print(replacements)
+        # def mark_bold(text):
+        #     """Detect uppercase text and wrap it with Word's bold styling for docxtpl."""
+        #     words = text.split()
+        #     formatted_words = ["<b>{}</b>".format(w) if w.isupper() else w for w in words]
 
-        processed_replacements = {
-            key: self._clean_value(value)
-            for key, value in replacements.items()
-        }
+        #     return " ".join(markdown2.markdown(word for word in formatted_words))
+
+
+        # if replacements.get("decision_from_order") is not None:
+        #     replacements['decision_from_order'] = mark_bold(replacements['decision_from_order'])
 
         self._template.render(replacements)
-        return processed_replacements
+        return replacements
 
     def _clean_value(self, value):
         """

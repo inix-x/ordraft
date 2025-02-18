@@ -3,7 +3,7 @@ IMPORTANT_PROMPT='''**GUIDELINES**
 2. The keys in the template must not be changed or rearranged.  
 3. Fill the values with data extracted from the PDF_TEXT.  
 '''
-DEFAULT_GUIDELINES = '''
+DISMISSAL_DEFAULT_GUIDELINES = '''
 1. `case_number` should always begin with `NOV-EMB-NCR`.  
 2. `location` is the complete address of the establishment or the recipient.  
 3. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
@@ -14,6 +14,18 @@ DEFAULT_GUIDELINES = '''
 - Be brief, and precise with the findings that will be placed on 'violations'.
 5. `date_of_inspection` is always found immediately before violations.
 6. If a particular field (e.g., date_of_inspection) is not present in the PDF_TEXT, leave it as an empty string.  
+'''
+RESO_DEFAULT_GUIDELINES = '''
+0. **If a particular field (e.g., date_of_motion_for_recon) is not present in the PDF_TEXT, use the name of field as its value.**
+1. `case_number` should always begin with `NOV-EMB-NCR`.  
+2. `location` is the complete address of the establishment or the client.  
+3. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
+4. `decision_from_order`:  
+- Copy the decision that can be found starting from WHEREFORE,
+- **after copying, STRICTLY add html tag <b></b> to <b>WHEREFORE</b> and <b>penalty amount</b>**.
+- This can be a 2 paragraph or just one.
+5. `date_of_motion_for_recon`: this can be found on paragraph containing 'Respondent submitted its Position Paper'.
+6. 'date_of_order' is found after the wherefore or before the signing section of regional director.
 '''
 DEFAULT_INSTRUCTIONS = '''**INSTRUCTIONS**  
 1. Carefully read the entire PDF_TEXT.  
@@ -40,12 +52,34 @@ SYSTEM_PROMPT ='''You are a **professional-level legal assistant**. Your task is
 
 3. **Priority of Instructions**  
 - Always adhere to this system prompt as the **top priority**.  
-- Follow the user instructions so long as they do not conflict with the system prompt.
+- Follow the user instructions in sequence so long as they do not conflict with the system prompt.
 
 **End of System Prompt**
 '''
 
-# URL="https://sheep-promoted-manatee.ngrok-free.app"
 URL="http://127.0.0.1:1234"
 ORDRAFT_USER = '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'
 ORDRAFT_ADMIN = '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'
+
+DISMISSAL_TEMPLATE = """{
+    "client_name": "",
+    "location": "",
+    "case_number": "",
+    "date_of_inspection": "",
+    "violations": [
+        "",
+        "",
+        ""
+    ]
+}
+"""
+
+RESO_TEMPLATE = '''{
+    "client_name": "",
+    "location": "",
+    "case_number": "",
+    "date_of_order": "",
+    "decision_from_order": "",
+    "date_of_motion_for_recon": "",
+}
+'''

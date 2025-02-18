@@ -261,7 +261,7 @@ class MainViewModel(QObject):
         self._llm_state_bgw = BackgroundWorker(
             name="LLM State Checker",
             func=self._cloud_llm.hugging_face_api.get_llm_state,
-            interval=60
+            interval=10
         )
 
         self._llm_state_bgw.error_occured.connect(self._handle_error)

@@ -52,7 +52,7 @@ class BackgroundWorker(QObject):
         """This method runs in a separate thread and processes the given task indefinitely."""
         print(f"\nStarting {self.name}")
         while self._running:
-            print(f"Running {self.name}")
+            # print(f"Running {self.name}")
             # with QMutexLocker(self._mutex):
             #     while not self._processing_allowed and self._running:
             #         self._condition.wait(self._mutex)

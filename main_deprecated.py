@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt, QUrl, pyqtSlot, QStandardPaths, QDir
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 
 from pkgs import (
-    DEFAULT_GUIDELINES, 
+    DISMISSAL_DEFAULT_GUIDELINES, 
     TemplateType, 
     MainViewModel, 
     GenerateDocData,
@@ -252,7 +252,7 @@ class MainWindow(QMainWindow):
         )
 
         if state == Qt.CheckState.Checked:
-            self.prompt.setText(DEFAULT_GUIDELINES)
+            self.prompt.setText(DISMISSAL_DEFAULT_GUIDELINES)
         else:
             self.prompt.setText("")
 

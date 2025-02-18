@@ -45,7 +45,7 @@ from pkgs.icons import MyFluentIcon as CFIF
 from pkgs import MainViewModel, Data
 
 from pkgs import (
-    URL, DEFAULT_GUIDELINES, TemplateType, MainViewModel,
+    URL, DISMISSAL_DEFAULT_GUIDELINES, TemplateType, MainViewModel,
     GenerateDocData, Data, UpdateDocData, CustomListItem,
     Utils, Models,
 )
@@ -330,7 +330,7 @@ class Window(FluentWindow):
         self.cfg = Config()
 
         # Interface
-        self.dismissal_interface = Widget("Dismissal", self)
+        self.dismissal_interface = Widget("Draft", self)
         self.settings_interface = Widget("Settings", self)
 
         # Dependencies
@@ -600,6 +600,7 @@ class Window(FluentWindow):
         self.file_button.clicked.connect(partial(self._browse, 0))
         self.save_location_btn.clicked.connect(partial(self._browse, 1))
         self.open_save_location_btn.clicked.connect(self._open_save_location)
+        self.template_combobox.currentTextChanged.connect(self._update_template_combobox)
         self.scan_stop_btn.clicked.connect(self.generate)
         self.generate_doc_btn.clicked.connect(self.view_model._handle_document_generation)
 
@@ -673,6 +674,19 @@ class Window(FluentWindow):
         except Exception:
             print(traceback.format_exc())
 
+    @pyqtSlot(str)
+    def _update_template_combobox(self, text):
+        template_enum = TemplateType(text)
+        if template_enum in \
+            [TemplateType.RESO_AIR, 
+             TemplateType.RESO_HW, 
+             TemplateType.DISMISSAL_PD, 
+             TemplateType.RESO_HW]:
+            self.include_reply.setChecked(False)
+            self.include_reply.setEnabled(False)
+        else:
+            self.include_reply.setEnabled(True)
+        
     def _open_save_location(self):
         try:
             absolute_path = os.path.relpath(self.save_location_btn.data)
