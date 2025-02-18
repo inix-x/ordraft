@@ -4,8 +4,6 @@ import traceback
 import markdown2
 from pathlib import Path
 from docxtpl import DocxTemplate
-from docx.oxml import OxmlElement
-from docx import Document as DocFormatter
 from pkgs.dataclass import DocPayload, Document
 from pkgs.misc import Utils
 

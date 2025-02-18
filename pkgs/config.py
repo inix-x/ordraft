@@ -21,8 +21,7 @@ RESO_DEFAULT_GUIDELINES = '''
 2. `location` is the complete address of the establishment or the client.  
 3. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
 4. `decision_from_order`:  
-- Copy the decision that can be found starting from WHEREFORE,
-- **after copying, STRICTLY add html tag <b></b> to <b>WHEREFORE</b> and <b>penalty amount</b>**.
+- **STRICTLY** Copy the decision that can be found starting from WHEREFORE,
 - This can be a 2 paragraph or just one.
 5. `date_of_motion_for_recon`: this can be found on paragraph containing 'Respondent submitted its Position Paper'.
 6. 'date_of_order' is found after the wherefore or before the signing section of regional director.
