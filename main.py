@@ -775,6 +775,9 @@ class Window(FluentWindow):
         if state in [StateLLM.Running, StateLLM.Initializing, StateLLM.Pending]:
             self.start_llm_service.button.setText(state.value.title())
             self.start_llm_service.button.setEnabled(False)
+        elif state == StateLLM.Running:
+            self.start_llm_service.button.setText(state.value.title())
+            self.start_llm_service.button.setEnabled(True)
         else:
             self.start_llm_service.button.setText("Start")
             self.start_llm_service.button.setEnabled(True)
@@ -803,6 +806,9 @@ class Window(FluentWindow):
         elif state in [StateLLM.Running]:
             if self.scan_stop_btn.isEnabled() is False:
                 self.scan_stop_btn.setEnabled(True)
+            if self.start_llm_service.button.isEnabled() is False:
+                self.start_llm_service.button.setEnabled(True)
+
             self.info_bars.createSuccessInfoBar(
                 w=w,
                 title="Assistant Status",
@@ -848,10 +854,6 @@ class Window(FluentWindow):
         if self.view_model.assistant_state in [
             StateLLM.Initializing, StateLLM.Pending, StateLLM.Running]:
             self.start_llm_service.button.setText(self.view_model.assistant_state.value.title())
-            self.info_bars.createInfoInfoBar(
-                title="Assistant Status",
-                content=f"The Assistant status is already {self.view_model.assistant_state.value}"
-            )
             self.view_model.stop_llm_service()
         elif self.view_model.assistant_state in [StateLLM.Paused, StateLLM.SCALED_TO_ZERO]:
             self.view_model.handle_llm_service()

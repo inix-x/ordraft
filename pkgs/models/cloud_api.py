@@ -392,6 +392,26 @@ class HuggingFaceAPI(QObject):
         finally:
             return success, res
 
+    def stop_llm_endpoint(self):
+        res = {}
+        success = True
+        try:
+            url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/pause"
+            response = requests.post(url, headers=self._headers, timeout=300)
+            response.raise_for_status()
+
+            res = response.json()
+        except requests.RequestException as e:
+            print(f"Error occurred during API request: {e}")
+            success = False
+            res = e
+        except Exception as e:
+            print(f"Error occurred during API request: {e}")
+            success = False
+            res = e
+        finally:
+            return success, res
+
     def start_llm_service(self):
         if self.llm_state in [StateLLM.Running, 
             StateLLM.Pending, StateLLM.Updating]:
@@ -421,7 +441,7 @@ class HuggingFaceAPI(QObject):
             self.llm_state_checked.emit(self.llm_state)
             return
         
-        success, res = self.resume_llm_endpoint()
+        success, res = self.stop_llm_endpoint()
 
         if success is False:
             return success, res
