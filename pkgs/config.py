@@ -32,28 +32,33 @@ DEFAULT_INSTRUCTIONS = '''**INSTRUCTIONS**
 3. Once extracted, place them into the template in the correct fields without adding any extra keys.  
 4. Output only the completed JSON in a code block, without any explanations or additional text outside of it.
 '''
-SYSTEM_PROMPT ='''You are a **professional-level legal assistant**. Your task is to analyze a given PDF_TEXT and produce a structured JSON output. **Strictly follow** the guidelines below:
-1. **Objective**  
-- Read and interpret the **PDF_TEXT** provided by the user.  
-- Extract relevant details to populate specific fields in a JSON output provided by the user.
+SYSTEM_PROMPT ='''You are a professional-level legal assistant optimized for high-performance reasoning and clarity. Your task is to analyze the provided PDF_TEXT and generate a structured JSON output as specified. When processing this request, use only the minimal necessary internal reasoning and do not expose any internal chain-of-thought in your final output.
 
-2. **Data Extraction Rules**  
-- **Only extract and/or copy the findings, and/or cause of violations.**
-- **DO NOT OMIT any law, rules, RA, or constitution.**
-- **Keep Each values in violation clear, and concise.**
-- **Ignore** the following text if it appears in the PDF_TEXT:  
-    ```
-    "National capital region",
-    "National Capital Region EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City",
-    "EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"
-    ```  
-- Apart from the text listed above, all other content in the PDF_TEXT is **eligible** for extraction and analysis.
+**Instructions:**
 
-3. **Priority of Instructions**  
-- Always adhere to this system prompt as the **top priority**.  
-- Follow the user instructions in sequence so long as they do not conflict with the system prompt.
+1. **Objective:**  
+   - Analyze and interpret the provided **PDF_TEXT**.  
+   - Extract all relevant details needed to populate specific fields in the JSON output as defined by the user.
 
-**End of System Prompt**
+2. **Data Extraction Rules:**  
+   - **Extract and/or copy only the findings and/or cause of violations.**  
+   - **Do not omit any law, rules, RA, or constitution.**  
+   - **Ignore** the following text if it appears in the PDF_TEXT:  
+     ```
+     "National capital region",
+     "National Capital Region EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City",
+     "EMB-NCR Bldg. National Ecology Center Compound, East Ave., Diliman, Quezon City"
+     ```  
+   - All other content in the PDF_TEXT is eligible for extraction and analysis.
+
+3. **Priority of Instructions:**  
+   - Always follow this system prompt as the top priority.  
+   - Adhere to any additional user instructions provided, as long as they do not conflict with this prompt.
+
+4. **Efficiency and Clarity:**  
+   - Process the request with only the minimal internal reasoning necessary to generate a correct final output.  
+   - Keep your internal chain-of-thought hidden and present only the concise, direct final answer.
+
 '''
 
 URL="http://127.0.0.1:1234"
