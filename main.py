@@ -458,7 +458,10 @@ class Window(FluentWindow):
         transparent.switchButton.checkedChanged.connect(
             lambda checked: self._change_visual(transparent=checked)
         )
+
         # layout: App settings
+        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
         self.settings_interface.vBoxlayout.addWidget(
             app_settings, alignment=Qt.AlignmentFlag.AlignTop
         )
@@ -468,7 +471,9 @@ class Window(FluentWindow):
         self.settings_interface.vBoxlayout.addWidget(
             self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
         )
+        
         # layout: Aesthetics
+        self.settings_interface.vBoxlayout.addItem(spacer)
         self.settings_interface.vBoxlayout.addWidget(
             aesthetics, alignment=Qt.AlignmentFlag.AlignTop
         )
@@ -480,6 +485,7 @@ class Window(FluentWindow):
         )
 
         # layout: Development
+        self.settings_interface.vBoxlayout.addItem(spacer)
         self.settings_interface.vBoxlayout.addWidget(
             development, alignment=Qt.AlignmentFlag.AlignTop
         )
@@ -795,8 +801,7 @@ class Window(FluentWindow):
             self.info_bars.createInfoInfoBar(
                 w=w,
                 title="Assistant Status",
-                content=f"In {state.value.title()} state; Do you want to start it?",
-                callback_widget=self.push_button
+                content=f"In {state.value.title()} state"
             )
             self.push_button.clicked.connect(self.handle_assistant_start)
             self.start_llm_service.button.setEnabled(True)
