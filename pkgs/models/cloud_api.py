@@ -9,7 +9,7 @@ import re
 
 from enum import Enum
 from httpx import URL
-from openai import OpenAI
+from huggingface_hub import InferenceClient
 from PyQt6.QtCore import (
     QObject, pyqtSignal
 )
@@ -501,10 +501,13 @@ class CloudLLM(QObject):
         self._hugging_face_api = HuggingFaceAPI()
         self._hugging_face_api.initialize()
         
-        self._llm_client = OpenAI(
+        self._llm_client = InferenceClient(
             base_url=self._hugging_face_api.llm_endpoint,
             api_key=ORDRAFT_ADMIN
             )
+        
+        
+        self._api_key = ORDRAFT_ADMIN
         self._model = None
 
         self._stop_requested = False
@@ -528,14 +531,14 @@ class CloudLLM(QObject):
 
     @property
     def api_key(self) -> str:
-        return self._llm_client.api_key
+        return self._api_key
 
     @api_key.setter
     def api_key(self, api_key: str):
         if not isinstance(api_key, str):
             raise TypeError(f"API Key provided is type {type(api_key)}, must be str.")
 
-        self._llm_client.api_key = api_key
+        self._api_key = api_key
 
     def _create_prompt(self, role: str, prompt: str) -> dict:
         return {"role": role, "content": prompt}
