@@ -48,18 +48,25 @@ class CustomInfoBarManager(InfoBarManager):
 
 class InfoBars(QWidget):
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         super().__init__()
 
     @pyqtSlot(str, str, int)
-    def createInfoInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
+    def createInfoInfoBar(
+        self,
+        w: QWidget,
+        title: str,
+        content: str,
+        duration: int = -1,
+        callback_widget: QWidget =None,
+    ):
         """Create Information bar
 
         Args:
-            title (str): 
-            content (str): 
+            title (str):
+            content (str):
             duration (int, optional): use milliseconds. Defaults to -1, -1 = disable auto close
-        """        
+        """
         w = InfoBar(
             icon=InfoBarIcon.INFORMATION,
             title=title,
@@ -71,18 +78,22 @@ class InfoBars(QWidget):
             duration=duration,
             parent=w,
         )
+        if callback_widget is not None and isinstance(callback_widget, QWidget):
+            w.addWidget(callback_widget)
         w.show()
         return w
 
     @pyqtSlot(str, str, int)
-    def createSuccessInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
+    def createSuccessInfoBar(
+        self, w: QWidget, title: str, content: str, duration: int = -1
+    ):
         """Create Success bar
 
         Args:
-            title (str): 
-            content (str): 
+            title (str):
+            content (str):
             duration (int, optional): use milliseconds. Defaults to -1, -1 = disable auto close
-        """    
+        """
         # convenient class mothod
         InfoBar.success(
             title=title,
@@ -98,14 +109,16 @@ class InfoBars(QWidget):
         return w
 
     @pyqtSlot(str, str, int)
-    def createWarningInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
+    def createWarningInfoBar(
+        self, w: QWidget, title: str, content: str, duration: int = -1
+    ):
         """Creates Warning bar
 
         Args:
-            title (str): 
-            content (str): 
+            title (str):
+            content (str):
             duration (int, optional): use milliseconds. Defaults to -1, -1 = disable auto close
-        """    
+        """
         InfoBar.warning(
             title=title,
             content=content,
@@ -119,14 +132,16 @@ class InfoBars(QWidget):
         return w
 
     @pyqtSlot(str, str, int)
-    def createErrorInfoBar(self, w: QWidget, title: str, content: str, duration: int = -1):
+    def createErrorInfoBar(
+        self, w: QWidget, title: str, content: str, duration: int = -1
+    ):
         """Create error bar
 
         Args:
-            title (str): 
-            content (str): 
+            title (str):
+            content (str):
             duration (int, optional): use milliseconds. Defaults to -1, -1 = disable auto close
-        """    
+        """
         InfoBar.error(
             title=title,
             content=content,
@@ -151,10 +166,10 @@ class InfoBars(QWidget):
         """Create info bar with custom icon
 
         Args:
-            title (str): 
-            content (str): 
+            title (str):
+            content (str):
             duration (int, optional): use milliseconds. Defaults to -1, -1 = disable auto close
-        """    
+        """
         if isinstance(icon, None):
             raise TypeError("icon is type of None")
         bar = InfoBar.new(

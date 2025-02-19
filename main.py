@@ -546,6 +546,8 @@ class Window(FluentWindow):
 
         self.info_bars = InfoBars(self)
 
+        self.push_button = PushButton("Start")
+
     def dismissal_setup_ui(self):
         self.stream_card = AIStreamCard()
         self.stream_card.setFixedWidth(725)
@@ -675,7 +677,7 @@ class Window(FluentWindow):
         if template_enum in \
             [TemplateType.RESO_AIR, 
              TemplateType.RESO_HW, 
-             TemplateType.DISMISSAL_PD, 
+             TemplateType.RESO_WATER, 
              TemplateType.RESO_HW]:
             self.include_reply.setChecked(False)
             self.include_reply.setEnabled(False)
@@ -789,11 +791,14 @@ class Window(FluentWindow):
         self.update_assistant_settings_status(state)
         
         if state in [StateLLM.Initializing, StateLLM.Pending, StateLLM.Updating, StateLLM.Paused]:
+            self.push_button.disconnect()
             self.info_bars.createInfoInfoBar(
                 w=w,
                 title="Assistant Status",
-                content=state.value.title()
+                content=f"In {state.value.title()} state; Do you want to start it?",
+                callback_widget=self.push_button
             )
+            self.push_button.clicked.connect(self.handle_assistant_start)
             self.start_llm_service.button.setEnabled(True)
         elif state in [StateLLM.Failed, StateLLM.Update_Failed]:
             content = state.value.title() if StateLLM.Failed else "Update Failed"
