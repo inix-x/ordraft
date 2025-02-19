@@ -563,21 +563,10 @@ class CloudLLM(QObject):
         
     def build_prompt(self, data: Document):
         pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path)
-        template = """
-        {
-            "client_name": "",
-            "location": "",
-            "case_number": "",
-            "date_of_inspection": "",
-            "violations": [
-                "",
-                "",
-                ""
-            ]
-        }
-        """
+
         guidelines = None
         template = None
+        
         if data.temp_doc_data.selected_template in [TemplateType.RESO_AIR, 
             TemplateType.RESO_WATER, TemplateType.DISMISSAL_HW, TemplateType.DISMISSAL_PD]:
             guidelines = RESO_DEFAULT_GUIDELINES

@@ -12,7 +12,12 @@ from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QWaitCondition, QMutex
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
-from pkgs.config import DISMISSAL_DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, IMPORTANT_PROMPT
+from pkgs.config import (
+    DISMISSAL_DEFAULT_GUIDELINES,
+    DEFAULT_INSTRUCTIONS,
+    IMPORTANT_PROMPT,
+    DISMISSAL_TEMPLATE,
+)
 from pkgs.dataclass import Document
 
 
@@ -151,20 +156,6 @@ class ModelLLM(QObject):
         Returns:
             dict: The JSON payload as a dictionary.
         """
-        # new: Define the JSON template for the extracted information
-        template = """
-        {
-            "client_name": "",
-            "location": "",
-            "case_number": "",
-            "date_of_inspection": "",
-            "violations": [
-                "",
-                "",
-                ""
-            ]
-        }
-        """
         # Choose custom prompt if available, otherwise default guidelines
         guidelines = custom_prompt if custom_prompt else DISMISSAL_DEFAULT_GUIDELINES
 
@@ -179,7 +170,7 @@ class ModelLLM(QObject):
         
         **TEMPLATE (DO NOT MODIFY THE KEYS)**
         Template:
-        {template}
+        {DISMISSAL_TEMPLATE}
 
         PDF_TEXT:
         {pdf_text}
@@ -187,10 +178,6 @@ class ModelLLM(QObject):
         payload = {
             "model": model,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "You are an assistant that extracts structured information from text.",
-                },
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.8,
