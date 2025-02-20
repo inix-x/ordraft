@@ -330,9 +330,6 @@ class Window(FluentWindow):
         # Dependencies Connections
         self.view_model.docEvents.connect(self.generate_events)
         self.view_model.chatbox_update.connect(self.update_chatbox)
-        # self.view_model.llm_state_changed.connect(self.update_assistant_status)
-        self.view_model.llm_state_changed.connect(self.assistant_status_notif)
-        self.view_model.llm_state_checked.connect(self.update_assistant_settings_status)
         self.view_model.llm_stream_finished.connect(self._finished)
         self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
         self.view_model.errorOccured.connect(self._handle_error)
@@ -398,13 +395,6 @@ class Window(FluentWindow):
         app_settings = SubtitleLabel("App", self)
         setFont(app_settings, 18)
         
-        self.start_llm_service = CustomPushSettingCard(
-            text="Start",
-            icon=FIF.FOLDER,
-            title="Start the LLM Service",
-            content="If the LLM service is paused or scaled to zero, click this button to resume it.",
-            parent=self,
-        )
         self.template_dir = CustomPushSettingCard(
             text="Show",
             icon=FIF.FOLDER,
@@ -449,7 +439,6 @@ class Window(FluentWindow):
         # Connections: App
         self.api_url.button.clicked.connect(self._show_change_api_url)
         self.template_dir.button.clicked.connect(self.show_template_dir)
-        self.start_llm_service.button.clicked.connect(self.handle_assistant_start)
 
         # Connections: Aeshethics
         dark_theme.switchButton.checkedChanged.connect(
@@ -464,9 +453,6 @@ class Window(FluentWindow):
 
         self.settings_interface.vBoxlayout.addWidget(
             app_settings, alignment=Qt.AlignmentFlag.AlignTop
-        )
-        self.settings_interface.vBoxlayout.addWidget(
-            self.start_llm_service, alignment=Qt.AlignmentFlag.AlignTop
         )
         self.settings_interface.vBoxlayout.addWidget(
             self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
@@ -778,62 +764,6 @@ class Window(FluentWindow):
         self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
         self.stream_card.chatbox.insertPlainText(text)
 
-    @pyqtSlot(StateLLM)
-    def update_assistant_settings_status(self, state: StateLLM):
-        if state in [StateLLM.Running, StateLLM.Initializing, StateLLM.Pending]:
-            self.start_llm_service.button.setText(state.value.title())
-            self.start_llm_service.button.setEnabled(False)
-        elif state == StateLLM.Running:
-            self.start_llm_service.button.setText(state.value.title())
-            self.start_llm_service.button.setEnabled(True)
-        else:
-            self.start_llm_service.button.setText("Start")
-            self.start_llm_service.button.setEnabled(True)
-
-    @pyqtSlot(StateLLM)            
-    def assistant_status_notif(self, state: StateLLM):
-        w = self.getCurrentSubInterface()
-
-        self.update_assistant_settings_status(state)
-        
-        if state in [StateLLM.Initializing, StateLLM.Pending, StateLLM.Updating, StateLLM.Paused]:
-            self.push_button.disconnect()
-            self.info_bars.createInfoInfoBar(
-                w=w,
-                title="Assistant Status",
-                content=f"In {state.value.title()} state"
-            )
-            self.push_button.clicked.connect(self.handle_assistant_start)
-            self.start_llm_service.button.setEnabled(True)
-        elif state in [StateLLM.Failed, StateLLM.Update_Failed]:
-            content = state.value.title() if StateLLM.Failed else "Update Failed"
-            self.info_bars.createErrorInfoBar(
-                w=w,
-                title="Assistant Status",
-                content=content
-            )
-            
-        elif state in [StateLLM.Running]:
-            if self.scan_stop_btn.isEnabled() is False:
-                self.scan_stop_btn.setEnabled(True)
-            if self.start_llm_service.button.isEnabled() is False:
-                self.start_llm_service.button.setEnabled(True)
-
-            self.info_bars.createSuccessInfoBar(
-                w=w,
-                title="Assistant Status",
-                content=state.value.title()
-            )
-
-        elif state in [StateLLM.SCALED_TO_ZERO]:
-            content = "Scaled to Zero: The system is in a paused state. Please contact the admin if an error occurs."
-            self.info_bars.createSuccessInfoBar(
-                w=w,
-                title="Assistant Status",
-                content=content
-            )
-        elif state != StateLLM.Running and self.scan_stop_btn.isEnabled() is True:
-                self.scan_stop_btn.setEnabled(False)
 
     @pyqtSlot(bool)
     def _finished(self, state):
@@ -858,15 +788,6 @@ class Window(FluentWindow):
         self.stream_card.chatbox.setPlainText("")
         self.scan_stop_btn.setText("Scan PDF")
 
-    def handle_assistant_start(self):
-        self.start_llm_service.button.setEnabled(False)
-        self.update()
-        if self.view_model.assistant_state in [
-            StateLLM.Initializing, StateLLM.Pending, StateLLM.Running]:
-            self.start_llm_service.button.setText(self.view_model.assistant_state.value.title())
-            self.view_model.stop_llm_service()
-        elif self.view_model.assistant_state in [StateLLM.Paused, StateLLM.SCALED_TO_ZERO]:
-            self.view_model.handle_llm_service()
 
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
@@ -874,9 +795,6 @@ class Window(FluentWindow):
         self.stream_card.chatbox.insertPlainText("\nOppsss...Something went wrong on my end.")
         self.generate_doc_btn.setEnabled(True)
 
-    def _confirm_llm_service_action(self):
-        if self.scan_stop_btn.data == 'scanning':
-            print(self.view_model.assistant_state)
     
     def closeEvent(self, e):
         self.view_model.stop_agents()

@@ -7,15 +7,35 @@ IMPORTANT_PROMPT='''**GUIDELINES**
 3. Fill the values with data extracted from the PDF_TEXT.  
 '''
 DISMISSAL_DEFAULT_GUIDELINES = '''
-1. `case_number` should always begin with `NOV-EMB-NCR`.  
-2. `location` is the complete address of the establishment or the recipient.  
-3. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
-4. `findings`:  
-- list the findings in the PDF_TEXT.  
-- Findings can be found under the table with findings header
-- do not include the rule, section, laws, or penalty, only the findings from the acts consituting the violation.  
-5. `date_of_inspection` is always found immediately before the phrase 'ACTS CONSTITUTING THE VIOLATION'.
-6. If a particular field (e.g., date_of_inspection) is not present in the PDF_TEXT, leave it as an empty string.  
+Your task is to extract structured information from PDF text and map it to the following JSON template:
+
+1. **Temporal Extraction Node (Notice vs. Inspection Dates):**
+   - **For `date_of_notice_of_violation`:**
+     - Locate the date before both the client name and location.
+     - This date is not in any paragraph.
+     - If a clear date isn't identified, default to the placeholder `"date_of_notice_of_violation"`.
+   - **For `date_of_inspection`:**
+     - **Primary Extraction:** Locate paragraph containing the phrase **"Notice is hereby served upon you"** the date immediately inside this paragraph.
+     - **Additional Clue:** Also search for a phrase **"ACTS CONSTITUTING THE VIOLATION"**. If found, extract the date associated with that paragraph.
+     - **Fallback & Disambiguation:** 
+       - If both dates are the same, then check the guidelines again for date of notice of violation.
+       - If only one date is present, do not assign it to both date fields.
+
+2. **Pattern Matching Node:**
+   - Extract the `case_number` ensuring it starts with the prefix `"NOV-EMB-NCR"`.
+   - Validate that the extracted string strictly begins with this prefix.
+
+3. **Entity and Address Recognition Node:**
+   - Identify and extract the complete address for `location`.
+   - Extract `client_name` as the text immediately preceding the location, which may include a personal or company name.
+
+4. **Section Parsing Node:**
+   - Locate the section under the header **"ACTS CONSTITUTING THE VIOLATION"**.
+   - Extract the list of findings from this section.
+   - **Filter:** Exclude any text related to rules, sections, laws, penalties, or phrases containing "R.A." — include only the descriptive findings of the acts constituting the violation.
+
+5. **Fallback and Error Handling Node:**
+   - If any field (e.g., `date_of_inspection` or `date_of_notice_of_violation`) is not detected in the PDF text, use the corresponding field name as its value.
 '''
 RESO_DEFAULT_GUIDELINES = '''
 0. **If a particular field (e.g., date_of_motion_for_recon) is not present in the PDF_TEXT, use the name of field as its value.**
@@ -96,6 +116,7 @@ ORDRAFT_USER = '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'
 ORDRAFT_ADMIN = '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'
 
 DISMISSAL_TEMPLATE = """{
+    "date_of_notice_of_violation": "",
     "client_name": "",
     "location": "",
     "case_number": "",
@@ -117,3 +138,7 @@ RESO_TEMPLATE = '''{
     "date_of_motion_for_recon": "",
 }
 '''
+
+
+NOVITA_KEY= 'sk_DyKz7flavRxAMZ9MP1aF2oLj-w_cP8JuG0IGTH9Nu7s'
+NOVITA = '39fffc5dbcd016b8573aed134dd96752efa5bce6b7d69a146e3206b0c426d0d4'

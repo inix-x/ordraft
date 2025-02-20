@@ -34,8 +34,6 @@ class MainViewModel(QObject):
 
     chatbox_update = pyqtSignal(str)
 
-    llm_state_checked = pyqtSignal(StateLLM)
-    llm_state_changed = pyqtSignal(StateLLM)
     llm_stream_finished = pyqtSignal(bool)
     stream_stopped_sucess = pyqtSignal(bool)
     
@@ -57,12 +55,6 @@ class MainViewModel(QObject):
         # Agents
         self.setup_agents()
 
-        # Background Worker
-        self.setup_background_worker()
-
-        # API
-        self._cloud_llm.hugging_face_api.llm_state_changed.connect(self._update_llm_state)
-        self._cloud_llm.hugging_face_api.llm_state_checked.connect(self._llm_state_checked)
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
@@ -72,17 +64,6 @@ class MainViewModel(QObject):
         self._cloud_llm.stream_stopped.connect(self._stream_stopped_success)
         
         self._llm_state: StateLLM = None
-        
-    @property
-    def assistant_state(self) -> StateLLM:
-        if self._llm_state is None:
-            self._llm_state = self._cloud_llm.hugging_face_api.llm_state
-        return self._llm_state
-
-    @assistant_state.setter
-    def assistant_state(self, state: StateLLM):
-        if self.assistant_state != state:
-            self.assistant_state = state
         
     @property
     def documents(self) -> DocumentsCollection:
@@ -122,15 +103,11 @@ class MainViewModel(QObject):
         except Exception as ve:
             print(traceback.format_exc())
             self.errorOccured.emit(str(ve))
-            self.llm_state_changed.emit(self._cloud_llm.hugging_face_api.llm_state)
             return False, ve
         try:
             self.word_processor.template_filepath = template_filepath
             # self._api_worker.add_task(data=document)
-            if self._cloud_llm.hugging_face_api.get_llm_state() == StateLLM.Running:
-                self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
-            else:
-                raise RuntimeError("LLM is not running. Start the LLM Service via Settings")
+            self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
             return True, None
         except Exception as e:
             self.errorOccured.emit(str(e))
@@ -267,26 +244,7 @@ class MainViewModel(QObject):
         
         self._cloud_llm_worker.stop()
         self._cloud_llm_worker_thread.quit()
-        # self._cloud_llm_worker_thread.wait()
-
-        self._llm_state_bgw.stop()
-        self._llm_state_bgw_thread.quit()
-        # self._llm_state_bgw_thread.wait()
-
-    def setup_background_worker(self):
-        self._llm_state_bgw_thread = QThread()
-        self._llm_state_bgw = BackgroundWorker(
-            name="LLM State Checker",
-            func=self._cloud_llm.hugging_face_api.get_llm_state,
-            interval=10
-        )
-
-        self._llm_state_bgw.error_occured.connect(self._handle_error)
-        self._llm_state_bgw.finished.connect(self._llm_state_bgw_thread.quit)
-        self._llm_state_bgw.moveToThread(self._llm_state_bgw_thread)
-
-        self._llm_state_bgw_thread.started.connect(self._llm_state_bgw.run)
-        self._llm_state_bgw_thread.start()
+        self._cloud_llm_worker_thread.wait()
 
     @pyqtSlot()
     def open_document(self, id):
@@ -329,16 +287,6 @@ class MainViewModel(QObject):
 
         return None
     
-    @pyqtSlot(StateLLM)
-    def _update_llm_state(self, state: StateLLM):
-        if self._llm_state != state:
-            self._llm_state = state
-            self.llm_state_changed.emit(state)
-
-    @pyqtSlot(StateLLM)
-    def _llm_state_checked(self, state: StateLLM):
-        if self._llm_state != state:
-            self.llm_state_checked.emit(state)
 
     @pyqtSlot(object)
     def _handle_error(self, err: object):
@@ -347,17 +295,3 @@ class MainViewModel(QObject):
     @pyqtSlot(bool)
     def handle_stream_stop(self, state):
         self._cloud_llm.stop()
-
-    @pyqtSlot()
-    def handle_llm_service(self):
-        if self.assistant_state != \
-            StateLLM.Running:
-            self._cloud_llm.hugging_face_api.start_llm_service()
-        else:
-            print("Your Assistant is already Running")
-
-        self.llm_state_checked.emit(self.assistant_state)
-    
-    def stop_llm_service(self):
-        if self.assistant_state == StateLLM.Running:
-            self._cloud_llm.hugging_face_api.stop_llm_service()
