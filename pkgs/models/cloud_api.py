@@ -35,6 +35,7 @@ from pkgs.enums import TemplateType
 HEADERS = {"Content-Type": "application/json"}
 __ENDPOINT_NAMESPACE__ = "inix-x"
 __ENDPOINT_NAME__ = "deepseek-r1-distill-llama-8b-spg"
+__ENDPOINT_NAME_V2__ = "ordraft-v1"
 __API_URL__ = "https://api.endpoints.huggingface.cloud"
 
 
@@ -56,7 +57,7 @@ class HuggingFaceAPI(QObject):
 
     def __init__(self):
         super().__init__()
-        self._endpoint = __ENDPOINT_NAME__
+        self._endpoint =  __ENDPOINT_NAME_V2__
         self._namespace = __ENDPOINT_NAMESPACE__
         self._api_url: URL = __API_URL__
 

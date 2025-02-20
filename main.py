@@ -14,7 +14,8 @@ from PyQt6.QtCore import (
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
-    QSizePolicy, QFileDialog, QSpacerItem
+    QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
+    QWidget, QListWidgetItem
 )
 from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices
 
@@ -23,12 +24,12 @@ from qfluentwidgets import (
     SwitchSettingCard, qconfig, StyleSheetBase, Theme, setTheme,
     setThemeColor, PushButton,CaptionLabel, CardWidget,
     isDarkTheme, IconWidget, BodyLabel, TransparentToolButton, 
-    PlainTextEdit, ComboBox,
+    PlainTextEdit, ComboBox, ListWidget, ListItemDelegate,
     CheckBox, MessageBoxBase, LineEdit,
     PushSettingCard,
 )
 from qfluentwidgets.common import (
-    ConfigItem, BoolValidator, FluentIconBase,
+    ConfigItem, BoolValidator, FluentIconBase
 )
 from qfluentwidgets import FluentIcon as FIF
 
@@ -37,8 +38,8 @@ from pkgs.icons import MyFluentIcon as CFIF
 
 
 from pkgs import (
-    URL, TemplateType, MainViewModel,
-    GenerateDocData, Data, UpdateDocData, InfoBars
+    URL, TemplateType, MainViewModel, CustomListItem,
+    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout
 )
 
 from pkgs import StateLLM
@@ -64,10 +65,11 @@ class Config(QConfig):
 
 class Container(QFrame):
 
-    def __init__(self, text: str, parent=None):
+    def __init__(self, text: str, orientation: str = "vertical", parent=None):
         super().__init__(parent=parent)
-        self.hBoxlayout = QHBoxLayout(self)
-        self.hBoxlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._layout = create_layout(orientation, self)
+        self.setLayout(self._layout)
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.setObjectName(text.replace(" ", "-"))
 
@@ -89,6 +91,66 @@ class Widget(QFrame):
         )
 
         self.setObjectName(text.replace(" ", "-"))
+
+
+class SplitContainerWidget(QFrame):
+
+    def __init__(
+        self,
+        object_name: str,
+        text: str = None,
+        left_w: ListWidget = None,
+        right_w: Union[QWidget, Widget, Container] = None,
+        parent=None,
+    ):
+        super().__init__(parent=parent)
+        if left_w is None and not isinstance(left_w, ListWidget):
+            raise ValueError("left_w expects a ListWidget")
+        if right_w is None:
+            raise ValueError("right_w expects a widget")
+
+        self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
+
+        self.left_w: ListWidget = left_w
+        self.left_w.setMaximumWidth(175)
+
+        self.right_w: Union[QWidget, Widget, Container] = right_w
+
+        self.splitter.addWidget(self.left_w)
+        self.splitter.addWidget(self.right_w)
+
+        self.splitter.setSizes([150, 450])
+
+        layout = QVBoxLayout(self)
+
+        if text is not None:
+            self.label = SubtitleLabel(text, self)
+            self.label.setAlignment(
+                Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter
+            )
+            setFont(self.label, 24)
+            layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignTop)
+        
+        layout.addWidget(self.splitter, 2)
+        
+        self.setObjectName(object_name.replace(" ", "-"))
+
+    def setSplitterTheme(self, dark_theme: bool):
+
+        if dark_theme:
+            handle_color = "#333333"
+        else:
+            handle_color = "#CCCCCC"
+
+        splitter_style = f"""
+            QSplitter {{
+                background-color: none;
+            }}
+            QSplitter::handle {{
+                background-color: {handle_color};
+            }}
+        """
+        self.splitter.setStyleSheet(splitter_style)
 
 
 class CustomPushSettingCard(PushSettingCard):
@@ -323,6 +385,15 @@ class Window(FluentWindow):
         # Interface
         self.dismissal_interface = Widget("Draft", self)
         self.settings_interface = Widget("Settings", self)
+        self.prototype_interface = SplitContainerWidget(
+            object_name="Draft View",
+            left_w=ListWidget(self),
+            right_w=Widget("Draft Assistant", self), # text in widget serve also as
+            parent=self)
+
+        self.list_prototype_interface = Widget("Prototype list", self)
+        self.selflist_prototype_interface = ListWidget(self)
+        self.list_prototype_interface.vBoxlayout.addWidget(self.selflist_prototype_interface)
 
         # Dependencies
         self.view_model = MainViewModel(Data())
@@ -338,13 +409,16 @@ class Window(FluentWindow):
         self.initWindow()
         self.settings_setup_ui()
         self.dismissal_setup_ui()
+        self.draft_setup_ui()
         self._load_config()
         self._components()
 
-        size = QSize(800, 600)
+        size = QSize(1150, 600)
         self.setMinimumSize(size)
         self.setBaseSize(size)
         self.resize(size)
+
+        self.connections()
 
     def _load_config(self):
         try:
@@ -377,12 +451,14 @@ class Window(FluentWindow):
 
     def initNavigation(self):
         self.addSubInterface(self.dismissal_interface, FIF.DOCUMENT, "Draft Dismissal")
+        self.addSubInterface(self.prototype_interface, FIF.LABEL, "Draft Assistant")
         self.addSubInterface(
             self.settings_interface,
             FIF.SETTING,
             "Settings",
             NavigationItemPosition.BOTTOM,
         )
+        self.addSubInterface(self.list_prototype_interface, FIF.TILES, "List")
 
     def initWindow(self):
         self.resize(900, 700)
@@ -457,7 +533,7 @@ class Window(FluentWindow):
         self.settings_interface.vBoxlayout.addWidget(
             self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
         )
-        
+
         # layout: Aesthetics
         self.settings_interface.vBoxlayout.addItem(spacer)
         self.settings_interface.vBoxlayout.addWidget(
@@ -485,6 +561,8 @@ class Window(FluentWindow):
 
         if dark_theme is not None:
             setTheme(Theme.DARK if dark_theme else Theme.LIGHT)
+
+            self.prototype_interface.setSplitterTheme(dark_theme)
             self.cfg.darkTheme = dark_theme
 
             style = (
@@ -550,8 +628,8 @@ class Window(FluentWindow):
             QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
         )
 
-        controls = Container("File Controls", self)
-        template_control = Container("Template Controls", self)
+        controls = Container("File Controls", "horizontal", self)
+        template_control = Container("Template Controls", "horizontal", self)
         controls.setFixedWidth(725)
         controls.setContentsMargins(0, 5, 0, 0)
         template_control.setFixedWidth(725)
@@ -562,7 +640,7 @@ class Window(FluentWindow):
 
         self.save_location_btn = PushButtonData(FIF.FOLDER_ADD, "Save location")
         self.save_location_btn.setFixedWidth(150)
-    
+
         self.open_save_location_btn = PushButton(FIF.FOLDER, "Open Generated Documents")
         self.open_save_location_btn.setFixedWidth(225)
 
@@ -573,7 +651,6 @@ class Window(FluentWindow):
         self.generate_doc_btn.setFixedWidth(125)
         self.generate_doc_btn.setEnabled(False)
 
-        
         # Template
         self.template_combobox = ComboBox()
         self.template_combobox.setFixedWidth(150)
@@ -594,26 +671,26 @@ class Window(FluentWindow):
         self.generate_doc_btn.clicked.connect(self.view_model._handle_document_generation)
 
         # File Control layout
-        controls.hBoxlayout.addWidget(
+        controls._layout.addWidget(
             self.save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls.hBoxlayout.addWidget(
+        controls._layout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls.hBoxlayout.addItem(spacer)        
-        controls.hBoxlayout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
+        controls._layout.addItem(spacer)        
+        controls._layout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
-        template_control.hBoxlayout.addWidget(
+        template_control._layout.addWidget(
             self.file_button, Qt.AlignmentFlag.AlignLeft
         )
-        template_control.hBoxlayout.addWidget(
+        template_control._layout.addWidget(
             self.template_combobox, Qt.AlignmentFlag.AlignLeft
         )
-        template_control.hBoxlayout.addWidget(
+        template_control._layout.addWidget(
             self.include_reply, Qt.AlignmentFlag.AlignLeft
         )
-        template_control.hBoxlayout.addWidget(
+        template_control._layout.addWidget(
             self.scan_stop_btn, Qt.AlignmentFlag.AlignLeft
         )
 
@@ -631,6 +708,99 @@ class Window(FluentWindow):
             alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
         )
         # controls.hBoxlayout.addWidget()
+
+    def draft_setup_ui(self):
+        self.stream_view = AIStreamCard()
+        self.stream_view.setFixedWidth(725)
+        self.stream_view.setMinimumWidth(725)
+        self.stream_view.setFixedHeight(350)
+
+        self.stream_view.setSizePolicy(
+            QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
+        )
+
+        controls = Container("File Controls", "horizontal",self)
+        template_control = Container("Template Controls", "horizontal",self)
+        controls.setFixedWidth(725)
+        controls.setContentsMargins(0, 5, 0, 0)
+        template_control.setFixedWidth(725)
+        template_control.setContentsMargins(0, 20, 0, 0)
+
+        self.file_button_pr = PushButtonData(FIF.ADD_TO, "Add new file")
+        self.file_button_pr.setFixedWidth(275)
+
+        self.save_location_btn_pr = PushButtonData(FIF.FOLDER_ADD, "Save location")
+        self.save_location_btn_pr.setFixedWidth(150)
+
+        self.open_save_location_btn_pr = PushButton(FIF.FOLDER, "Open Generated Documents")
+        self.open_save_location_btn_pr.setFixedWidth(225)
+
+        self.scan_stop_btn_pr = PushButtonData(QIcon("icons:bot.icon.svg"), "Scan PDF")
+        self.scan_stop_btn_pr.setFixedWidth(125)
+
+        self.generate_doc_btn_pr = PushButton(CFIF.NEW_FILE, "Generate")
+        self.generate_doc_btn_pr.setFixedWidth(125)
+        self.generate_doc_btn_pr.setEnabled(False)
+
+        # Template
+        self.template_combobox_pr = ComboBox()
+        self.template_combobox_pr.setFixedWidth(150)
+        self.template_combobox_pr.addItems([template.value for template in TemplateType])
+        self.template_combobox_pr.setPlaceholderText("Choose template")
+        self.template_combobox_pr.setCurrentIndex(-1)
+
+        self.include_reply_pr = CheckBox("Include Reply")
+
+        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        # Connections
+        # self.file_button_pr.clicked.connect(partial(self._browse, 0))
+        # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
+        # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
+        # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
+        # self.scan_stop_btn_pr.clicked.connect(self.generate)
+        # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
+
+        # File Control layout
+        controls._layout.addWidget(
+            self.save_location_btn_pr, Qt.AlignmentFlag.AlignLeft
+        )
+        controls._layout.addWidget(
+            self.open_save_location_btn_pr, Qt.AlignmentFlag.AlignLeft
+        )
+        controls._layout.addItem(spacer)        
+        controls._layout.addWidget(self.generate_doc_btn_pr, Qt.AlignmentFlag.AlignRight)
+
+        # Template Control Layout
+        template_control._layout.addWidget(
+            self.file_button_pr, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control._layout.addWidget(
+            self.template_combobox_pr, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control._layout.addWidget(
+            self.include_reply_pr, Qt.AlignmentFlag.AlignLeft
+        )
+        template_control._layout.addWidget(
+            self.scan_stop_btn_pr, Qt.AlignmentFlag.AlignLeft
+        )
+
+        # Dismissal Layout
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            self.stream_view,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            template_control,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            controls,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+
+    def connections(self):
+        self.scan_stop_btn_pr.clicked.connect(self._prototype)
 
     def _browse(self, type: int):
         try:
@@ -675,7 +845,7 @@ class Window(FluentWindow):
             self.include_reply.setEnabled(False)
         else:
             self.include_reply.setEnabled(True)
-        
+
     def _open_save_location(self):
         try:
             absolute_path = os.path.relpath(self.save_location_btn.data)
@@ -727,7 +897,7 @@ class Window(FluentWindow):
             self.view_model.handle_stream_stop(True)
             self.scan_stop_btn.setEnabled(False)
             return 
-        
+
         self.generate_doc_btn.setEnabled(False)
         self.stream_card.chatbox.setPlainText("")
         try:
@@ -741,12 +911,12 @@ class Window(FluentWindow):
                 custom_prompt="",
             )
             success, e = self.view_model.main_handler(data)
-            
+
             if success is True:
                 self.stream_card.chatbox.setPlainText("Preparing... ")
                 self.scan_stop_btn.data = "scanning" 
                 self.scan_stop_btn.setText("Stop")
-                
+
         except Exception as e:
             print(traceback.format_exc())
             self.show_message_box("Error", f"{e}")
@@ -755,11 +925,11 @@ class Window(FluentWindow):
         if doc.status == "Done":
             self.generate_doc_btn.setEnabled(True)
             pass
-            
+
         if doc.error:
             self.generate_doc_btn.setEnabled(True)
             self.show_message_box("Error", str(doc.error))
-    
+
     def update_chatbox(self, text: str):
         self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
         self.stream_card.chatbox.insertPlainText(text)
@@ -777,7 +947,7 @@ class Window(FluentWindow):
         if state is not True:
             self.show_message_box("Error", "RESTART THE APP")
             return
-        
+
         self.scan_stop_btn.data = 'not-scanning'
         self.scan_stop_btn.setText("Scan PDF")
         self.scan_stop_btn.setEnabled(True)
@@ -795,7 +965,14 @@ class Window(FluentWindow):
         self.stream_card.chatbox.insertPlainText("\nOppsss...Something went wrong on my end.")
         self.generate_doc_btn.setEnabled(True)
 
-    
+
+    def _prototype(self):
+        for i in range(5):  
+            item = QListWidgetItem()  
+            item.setIcon(QIcon(CFIF.URL))
+            item.setText(f"Item {i+1}")
+            self.selflist_prototype_interface.addItem(item)
+
     def closeEvent(self, e):
         self.view_model.stop_agents()
         return super().closeEvent(e)
