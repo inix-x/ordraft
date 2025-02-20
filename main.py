@@ -401,14 +401,15 @@ class Window(FluentWindow):
         # Interface
         self.dismissal_interface = Widget("Draft", self)
         self.settings_interface = Widget("Settings", self)
-        # self.prototype_interface = SplitContainerWidget(
-        #     object_name="Draft View",
-        #     left_w=ListWidget(self),
-        #     right_w=Widget("Draft Assistant", self),  # text in widget serve also as
-        #     parent=self,
-        # )
+        self.prototype_interface = SplitContainerWidget(
+            object_name="Draft View",
+            left_w=ListWidget(self),
+            right_w=Widget("Draft Assistant", self), # text in widget serve also as
+            parent=self)
 
+        self.list_prototype_interface = Widget("Prototype list", self)
         self.selflist_prototype_interface = ListWidget(self)
+        self.list_prototype_interface.vBoxlayout.addWidget(self.selflist_prototype_interface)
 
         # Dependencies
         self.view_model = MainViewModel(Data())
@@ -437,7 +438,7 @@ class Window(FluentWindow):
         self.setBaseSize(size)
         self.resize(size)
 
-        # self.connections()
+        self.connections()
 
     def _moved_data(self):
         try:
@@ -485,13 +486,14 @@ class Window(FluentWindow):
 
     def initNavigation(self):
         self.addSubInterface(self.dismissal_interface, FIF.DOCUMENT, "Draft Dismissal")
-        # self.addSubInterface(self.prototype_interface, FIF.LABEL, "Draft Assistant")
+        self.addSubInterface(self.prototype_interface, FIF.LABEL, "Draft Assistant")
         self.addSubInterface(
             self.settings_interface,
             FIF.SETTING,
             "Settings",
             NavigationItemPosition.BOTTOM,
         )
+        self.addSubInterface(self.list_prototype_interface, FIF.TILES, "List")
 
     def initWindow(self):
         self.resize(900, 700)
@@ -597,7 +599,7 @@ class Window(FluentWindow):
         if dark_theme is not None:
             setTheme(Theme.DARK if dark_theme else Theme.LIGHT)
 
-            # self.prototype_interface.setSplitterTheme(dark_theme)
+            self.prototype_interface.setSplitterTheme(dark_theme)
             self.cfg.darkTheme = dark_theme
 
             style = (
@@ -713,15 +715,19 @@ class Window(FluentWindow):
         )
 
         # File Control layout
-        controls._layout.addWidget(self.save_location_btn, Qt.AlignmentFlag.AlignLeft)
+        controls._layout.addWidget(
+            self.save_location_btn, Qt.AlignmentFlag.AlignLeft
+        )
         controls._layout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls._layout.addItem(spacer)
+        controls._layout.addItem(spacer)        
         controls._layout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
-        template_control._layout.addWidget(self.file_button, Qt.AlignmentFlag.AlignLeft)
+        template_control._layout.addWidget(
+            self.file_button, Qt.AlignmentFlag.AlignLeft
+        )
         template_control._layout.addWidget(
             self.template_combobox, Qt.AlignmentFlag.AlignLeft
         )
