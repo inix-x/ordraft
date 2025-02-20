@@ -349,7 +349,7 @@ class CloudLLM(QObject):
         template = None
         
         if data.temp_doc_data.selected_template in [TemplateType.RESO_AIR, 
-            TemplateType.RESO_WATER, TemplateType.DISMISSAL_HW, TemplateType.DISMISSAL_PD]:
+            TemplateType.RESO_WATER, TemplateType.RESO_PD, TemplateType.RESO_HW]:
             guidelines = RESO_DEFAULT_GUIDELINES
             template = RESO_TEMPLATE
         else:

@@ -246,10 +246,6 @@ class MainViewModel(QObject):
         self._cloud_llm_worker_thread.quit()
         self._cloud_llm_worker_thread.wait()
 
-        # self._llm_state_bgw.stop()
-        # self._llm_state_bgw_thread.quit()
-        # self._llm_state_bgw_thread.wait()
-
     @pyqtSlot()
     def open_document(self, id):
         try:
