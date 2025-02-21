@@ -429,7 +429,7 @@ class Window(FluentWindow):
         self._load_config()
         self._components()
 
-        size = QSize(800, 600) # 1150, 600
+        size = QSize(1150, 600) # 800, 600
         self.setMinimumSize(size)
         self.setBaseSize(size)
         self.resize(size)
@@ -829,18 +829,18 @@ class Window(FluentWindow):
         )
 
         # Dismissal Layout
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     self.stream_view,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     template_control,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     controls,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            self.stream_view,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            template_control,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            controls,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
 
     def connections(self):
         self.scan_stop_btn_pr.clicked.connect(self._prototype)
