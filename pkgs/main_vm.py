@@ -3,7 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QEventLoop
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
@@ -244,7 +244,10 @@ class MainViewModel(QObject):
         
         self._cloud_llm_worker.stop()
         self._cloud_llm_worker_thread.quit()
-        self._cloud_llm_worker_thread.wait()
+
+        event_loop = QEventLoop()
+        self._cloud_llm_worker_thread.finished.connect(event_loop.quit)
+        event_loop.exec()  # This keeps the UI responsive while waiting
 
     @pyqtSlot()
     def open_document(self, id):
