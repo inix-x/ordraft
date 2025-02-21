@@ -431,7 +431,6 @@ class Window(FluentWindow):
         )
 
         self.selflist_prototype_interface = ListWidget(self)
-        self.list_prototype_interface.vBoxlayout.addWidget(self.selflist_prototype_interface)
 
         # Dependencies
         self.view_model = MainViewModel(Data())
@@ -516,7 +515,6 @@ class Window(FluentWindow):
             "Settings",
             NavigationItemPosition.BOTTOM,
         )
-        self.addSubInterface(self.list_prototype_interface, FIF.TILES, "List")
 
     def initWindow(self):
         self.resize(900, 700)
@@ -738,19 +736,15 @@ class Window(FluentWindow):
         )
 
         # File Control layout
-        controls._layout.addWidget(
-            self.save_location_btn, Qt.AlignmentFlag.AlignLeft
-        )
+        controls._layout.addWidget(self.save_location_btn, Qt.AlignmentFlag.AlignLeft)
         controls._layout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls._layout.addItem(spacer)        
+        controls._layout.addItem(spacer)
         controls._layout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
-        template_control._layout.addWidget(
-            self.file_button, Qt.AlignmentFlag.AlignLeft
-        )
+        template_control._layout.addWidget(self.file_button, Qt.AlignmentFlag.AlignLeft)
         template_control._layout.addWidget(
             self.template_combobox, Qt.AlignmentFlag.AlignLeft
         )

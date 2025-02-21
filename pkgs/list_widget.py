@@ -55,7 +55,7 @@ class PulsatingSvgLabel(QLabel):
     def start_animation(self):
         # Animation for scaling up from 0.75 to 1.
         animation_up = QPropertyAnimation(self, b"scaleFactor")
-        animation_up.setStartValue(0.60)
+        animation_up.setStartValue(0.75)
         animation_up.setEndValue(1)
         animation_up.setDuration(1000)
         animation_up.setEasingCurve(QEasingCurve.Type.InOutQuad)
@@ -63,7 +63,7 @@ class PulsatingSvgLabel(QLabel):
         # Animation for scaling down from 1 to 0.75.
         animation_down = QPropertyAnimation(self, b"scaleFactor")
         animation_down.setStartValue(1)
-        animation_down.setEndValue(0.60)
+        animation_down.setEndValue(0.75)
         animation_down.setDuration(1000)
         animation_down.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
@@ -121,7 +121,7 @@ class PulsatingSvgLabel(QLabel):
 
     def resume_animation(self):
         """
-        Smoothly resumes the pulsating animation by first transitioning to the starting scale (0.60)
+        Smoothly resumes the pulsating animation by first transitioning to the starting scale (0.75)
         and then restarting the pulsating animation group.
         """
         # If the pulsation group is already running, do nothing.
@@ -131,7 +131,7 @@ class PulsatingSvgLabel(QLabel):
         # Create an animation to transition from the current scale to 0.75.
         self.resume_anim = QPropertyAnimation(self, b"scaleFactor")
         self.resume_anim.setStartValue(self._scaleFactor)
-        self.resume_anim.setEndValue(0.60)
+        self.resume_anim.setEndValue(0.75)
         self.resume_anim.setDuration(1000)
         self.resume_anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
         # Once this transition finishes, rebuild and start the pulsating animation.
@@ -145,14 +145,14 @@ class PulsatingSvgLabel(QLabel):
         self.animationGroup = QSequentialAnimationGroup(self)
 
         animation_up = QPropertyAnimation(self, b"scaleFactor")
-        animation_up.setStartValue(0.60)
+        animation_up.setStartValue(0.75)
         animation_up.setEndValue(1)
         animation_up.setDuration(1000)
         animation_up.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         animation_down = QPropertyAnimation(self, b"scaleFactor")
         animation_down.setStartValue(1)
-        animation_down.setEndValue(0.60)
+        animation_down.setEndValue(0.75)
         animation_down.setDuration(1000)
         animation_down.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
@@ -267,6 +267,12 @@ class AutoResizeLabel(QLabel):
     def setText(self, text):
         super().setText(text)
         self.adjustSize()
+
+
+
+class CustomListItem(QWidget):
+    def __init__(self, status, name, parent=None, id=None):
+        super().__init__(parent)
 
 
 
