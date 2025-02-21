@@ -840,18 +840,18 @@ class Window(FluentWindow):
         )
 
         # Dismissal Layout
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     self.stream_view,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     template_control,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
-        # self.prototype_interface.right_w.vBoxlayout.addWidget(
-        #     controls,
-        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        # )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            self.stream_view,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            template_control,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
+        self.prototype_interface.right_w.vBoxlayout.addWidget(
+            controls,
+            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        )
 
     def connections(self):
         self.scan_stop_btn_pr.clicked.connect(self._prototype)

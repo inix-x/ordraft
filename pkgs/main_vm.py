@@ -3,7 +3,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
+from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QEventLoop
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
     test = sys.path.append(
