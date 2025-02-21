@@ -1,8 +1,11 @@
 import os
 import traceback
+
+import xml.sax.saxutils as saxutils
 from docxtpl import DocxTemplate
 from pkgs.dataclass import Document
 from pkgs.misc import Utils
+
 
 class WordPlaceholderReplacer:
 
@@ -48,13 +51,14 @@ class WordPlaceholderReplacer:
             api_data.api_response["case_number_only"] = case_number[-9:]
 
             self._replace_placeholders(api_data.api_response)
-            doc_filepath = self._save(document.temp_doc_data.save_path, case_number)
+            doc_filepath = self._save(document.temp_doc_data.save_path, case_number, document.temp_doc_data.selected_template)
             
             document.file_name = os.path.basename(doc_filepath)
             document.save_filepath = doc_filepath
             
             return document
         except Exception as e:
+            print(traceback.format_exc())
             document.doc_payload.status = "Error"
             document.doc_payload.error_occured = e
             return document
@@ -66,18 +70,24 @@ class WordPlaceholderReplacer:
         Args:
             replacements (dict): A dictionary where keys are placeholder names.
         """
-        # def mark_bold(text):
-        #     """Detect uppercase text and wrap it with Word's bold styling for docxtpl."""
-        #     words = text.split()
-        #     formatted_words = ["<b>{}</b>".format(w) if w.isupper() else w for w in words]
+        def escape_xml(value):
+            """Escape XML special characters in strings and ensure each string ends with a period."""  
+            if isinstance(value, str):  
+                escaped = saxutils.escape(value)  
+                
+                if not escaped.endswith('.'):  
+                    escaped += '.'  
+                return escaped  
+            elif isinstance(value, list):  
+                
+                return [escape_xml(item) for item in value]  
+            return value  
 
-        #     return " ".join(markdown2.markdown(word for word in formatted_words))
+        clean = {
+            key: escape_xml(value) for key, value in replacements.items()
+        }
 
-
-        # if replacements.get("decision_from_order") is not None:
-        #     replacements['decision_from_order'] = mark_bold(replacements['decision_from_order'])
-
-        self._template.render(replacements)
+        self._template.render(clean)
         return replacements
 
     def _clean_value(self, value):
@@ -112,10 +122,10 @@ class WordPlaceholderReplacer:
             return value.replace("\n", "").strip()
         return value 
 
-    def _save(self, save_location, filename) -> str:
+    def _save(self, save_location, filename, template_type) -> str:
         """Saves the modified Word document to the output file."""
         try:
-            new_path = Utils.get_unique_filename(save_location, filename, "docx")
+            new_path = Utils.get_unique_filename(save_location, filename, template_type)
             self._template.save(new_path)
             return new_path
         except Exception:

@@ -18,7 +18,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.config import (
-    DISMISSAL_DEFAULT_GUIDELINES,
+    DismissalGuidelines,
     RESO_DEFAULT_GUIDELINES,
     RESO_TEMPLATE,
     DISMISSAL_TEMPLATE,
@@ -354,9 +354,11 @@ class CloudLLM(QObject):
             guidelines = RESO_DEFAULT_GUIDELINES
             template = RESO_TEMPLATE
         else:
-            guidelines = DISMISSAL_DEFAULT_GUIDELINES
+            base_guideline = DismissalGuidelines()
+            base_guideline.document_type = data.temp_doc_data.selected_template
+            guidelines = base_guideline.guidelines
             template = DISMISSAL_TEMPLATE
-        
+
         user_prompt = f"""
         **TASK**  
         Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
@@ -391,7 +393,7 @@ class CloudLLM(QObject):
         
         try:
             chat_completion = self._llm_client.chat.completions.create(
-                model="deepseek/deepseek-r1-distill-llama-8b",
+                model="deepseek/deepseek-r1-distill-llama-70b",
                 messages=[user_prompt, system_prompt],
                 temperature=0.75,
                 max_tokens=8192,

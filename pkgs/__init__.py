@@ -1,5 +1,5 @@
 from pkgs.api import ApiWorker
-from pkgs.config import DISMISSAL_DEFAULT_GUIDELINES, DEFAULT_INSTRUCTIONS, URL, ORDRAFT_USER, ORDRAFT_ADMIN
+from pkgs.config import DismissalGuidelines, DEFAULT_INSTRUCTIONS, URL, ORDRAFT_USER, ORDRAFT_ADMIN
 from pkgs.enums import TemplateFile, TemplateType, Models
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.main_vm import MainViewModel
@@ -26,7 +26,7 @@ __all__ = [
     "Models",
     "SettingsViewModel",
     "SettingsModel",
-    "DISMISSAL_DEFAULT_GUIDELINES",
+    "DismissalGuidelines",
     "DEFAULT_INSTRUCTIONS",
     "TemplateFile",
     "TemplateType",
