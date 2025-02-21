@@ -12,7 +12,7 @@ from pkgs.dataclass import (
     UpdateDocData,
 )
 from pkgs.misc import Utils, Data
-from pkgs.list_widget import CustomListItem
+from pkgs.list_widget import CustomListItem, QueueItem
 
 # from .views import settings_view
 from pkgs.handlers import SettingsViewModel
@@ -22,6 +22,7 @@ from pkgs.views import InfoBars
 from pkgs.utils import create_layout
 
 __all__ = [
+    "QueueItem",
     "Models",
     "SettingsViewModel",
     "SettingsModel",

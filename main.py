@@ -10,7 +10,7 @@ from typing import Union
 
 
 from PyQt6.QtCore import (
-    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot
+    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
@@ -39,7 +39,8 @@ from pkgs.icons import MyFluentIcon as CFIF
 
 from pkgs import (
     URL, TemplateType, MainViewModel, CustomListItem,
-    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout
+    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout,
+    QueueItem
 )
 
 from pkgs import StateLLM
@@ -95,6 +96,8 @@ class Widget(QFrame):
 
 class SplitContainerWidget(QFrame):
 
+    leftWidgetAtMinimum = pyqtSignal(bool)
+
     def __init__(
         self,
         object_name: str,
@@ -112,6 +115,9 @@ class SplitContainerWidget(QFrame):
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
         self.left_w: ListWidget = left_w
+        self.left_w.setUniformItemSizes(True)
+        self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.left_w.setMinimumWidth(53)
         self.left_w.setMaximumWidth(175)
 
         self.right_w: Union[QWidget, Widget, Container] = right_w
@@ -130,10 +136,18 @@ class SplitContainerWidget(QFrame):
             )
             setFont(self.label, 24)
             layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignTop)
-        
+
         layout.addWidget(self.splitter, 2)
-        
+
         self.setObjectName(object_name.replace(" ", "-"))
+
+        self.splitter.splitterMoved.connect(self.check_left_widget_width)
+
+    def check_left_widget_width(self, pos: int, index: int):
+        if self.left_w.width() <= self.left_w.minimumWidth() + 32: 
+            self.leftWidgetAtMinimum.emit(True)
+        else:
+            self.leftWidgetAtMinimum.emit(False)
 
     def setSplitterTheme(self, dark_theme: bool):
 
@@ -388,12 +402,11 @@ class Window(FluentWindow):
         self.prototype_interface = SplitContainerWidget(
             object_name="Draft View",
             left_w=ListWidget(self),
-            right_w=Widget("Draft Assistant", self), # text in widget serve also as
-            parent=self)
+            right_w=Widget("Draft Assistant", self),  # text in widget serve also as
+            parent=self,
+        )
 
-        self.list_prototype_interface = Widget("Prototype list", self)
         self.selflist_prototype_interface = ListWidget(self)
-        self.list_prototype_interface.vBoxlayout.addWidget(self.selflist_prototype_interface)
 
         # Dependencies
         self.view_model = MainViewModel(Data())
@@ -458,7 +471,6 @@ class Window(FluentWindow):
             "Settings",
             NavigationItemPosition.BOTTOM,
         )
-        self.addSubInterface(self.list_prototype_interface, FIF.TILES, "List")
 
     def initWindow(self):
         self.resize(900, 700)
@@ -470,7 +482,7 @@ class Window(FluentWindow):
         # UI: APP
         app_settings = SubtitleLabel("App", self)
         setFont(app_settings, 18)
-        
+
         self.template_dir = CustomPushSettingCard(
             text="Show",
             icon=FIF.FOLDER,
@@ -525,7 +537,9 @@ class Window(FluentWindow):
         )
 
         # layout: App settings
-        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        spacer = QSpacerItem(
+            20, 20, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum
+        )
 
         self.settings_interface.vBoxlayout.addWidget(
             app_settings, alignment=Qt.AlignmentFlag.AlignTop
@@ -577,6 +591,7 @@ class Window(FluentWindow):
             self._updateStackedBackground()
             self.cfg.transparent_bg = transparent
 
+        self._update_queue_list_item_theme(dark_theme)
         self.cfg.save()
 
     def _show_change_api_url(self):
@@ -660,30 +675,32 @@ class Window(FluentWindow):
 
         self.include_reply = CheckBox("Include Reply")
 
-        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacer = QSpacerItem(
+            20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
 
         # Connections
         self.file_button.clicked.connect(partial(self._browse, 0))
         self.save_location_btn.clicked.connect(partial(self._browse, 1))
         self.open_save_location_btn.clicked.connect(self._open_save_location)
-        self.template_combobox.currentTextChanged.connect(self._update_template_combobox)
+        self.template_combobox.currentTextChanged.connect(
+            self._update_template_combobox
+        )
         self.scan_stop_btn.clicked.connect(self.generate)
-        self.generate_doc_btn.clicked.connect(self.view_model._handle_document_generation)
+        self.generate_doc_btn.clicked.connect(
+            self.view_model._handle_document_generation
+        )
 
         # File Control layout
-        controls._layout.addWidget(
-            self.save_location_btn, Qt.AlignmentFlag.AlignLeft
-        )
+        controls._layout.addWidget(self.save_location_btn, Qt.AlignmentFlag.AlignLeft)
         controls._layout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls._layout.addItem(spacer)        
+        controls._layout.addItem(spacer)
         controls._layout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
-        template_control._layout.addWidget(
-            self.file_button, Qt.AlignmentFlag.AlignLeft
-        )
+        template_control._layout.addWidget(self.file_button, Qt.AlignmentFlag.AlignLeft)
         template_control._layout.addWidget(
             self.template_combobox, Qt.AlignmentFlag.AlignLeft
         )
@@ -719,8 +736,8 @@ class Window(FluentWindow):
             QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding
         )
 
-        controls = Container("File Controls", "horizontal",self)
-        template_control = Container("Template Controls", "horizontal",self)
+        controls = Container("File Controls", "horizontal", self)
+        template_control = Container("Template Controls", "horizontal", self)
         controls.setFixedWidth(725)
         controls.setContentsMargins(0, 5, 0, 0)
         template_control.setFixedWidth(725)
@@ -732,7 +749,9 @@ class Window(FluentWindow):
         self.save_location_btn_pr = PushButtonData(FIF.FOLDER_ADD, "Save location")
         self.save_location_btn_pr.setFixedWidth(150)
 
-        self.open_save_location_btn_pr = PushButton(FIF.FOLDER, "Open Generated Documents")
+        self.open_save_location_btn_pr = PushButton(
+            FIF.FOLDER, "Open Generated Documents"
+        )
         self.open_save_location_btn_pr.setFixedWidth(225)
 
         self.scan_stop_btn_pr = PushButtonData(QIcon("icons:bot.icon.svg"), "Scan PDF")
@@ -745,15 +764,27 @@ class Window(FluentWindow):
         # Template
         self.template_combobox_pr = ComboBox()
         self.template_combobox_pr.setFixedWidth(150)
-        self.template_combobox_pr.addItems([template.value for template in TemplateType])
+        self.template_combobox_pr.addItems(
+            [template.value for template in TemplateType]
+        )
         self.template_combobox_pr.setPlaceholderText("Choose template")
         self.template_combobox_pr.setCurrentIndex(-1)
 
         self.include_reply_pr = CheckBox("Include Reply")
 
-        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacer = QSpacerItem(
+            20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
 
         # Connections
+        self.file_button_pr.clicked.connect(
+            lambda id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
+                id, icon, loop
+            )
+        )
+        self.save_location_btn_pr.clicked.connect(lambda id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
+                id, icon, loop
+        ))
         # self.file_button_pr.clicked.connect(partial(self._browse, 0))
         # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
         # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
@@ -768,8 +799,10 @@ class Window(FluentWindow):
         controls._layout.addWidget(
             self.open_save_location_btn_pr, Qt.AlignmentFlag.AlignLeft
         )
-        controls._layout.addItem(spacer)        
-        controls._layout.addWidget(self.generate_doc_btn_pr, Qt.AlignmentFlag.AlignRight)
+        controls._layout.addItem(spacer)
+        controls._layout.addWidget(
+            self.generate_doc_btn_pr, Qt.AlignmentFlag.AlignRight
+        )
 
         # Template Control Layout
         template_control._layout.addWidget(
@@ -801,6 +834,9 @@ class Window(FluentWindow):
 
     def connections(self):
         self.scan_stop_btn_pr.clicked.connect(self._prototype)
+        self.prototype_interface.leftWidgetAtMinimum.connect(
+            self._set_queue_list_text_visibility
+        )
 
     def _browse(self, type: int):
         try:
@@ -836,11 +872,12 @@ class Window(FluentWindow):
     @pyqtSlot(str)
     def _update_template_combobox(self, text):
         template_enum = TemplateType(text)
-        if template_enum in \
-            [TemplateType.RESO_AIR, 
-             TemplateType.RESO_HW, 
-             TemplateType.RESO_WATER, 
-             TemplateType.RESO_HW]:
+        if template_enum in [
+            TemplateType.RESO_AIR,
+            TemplateType.RESO_HW,
+            TemplateType.RESO_WATER,
+            TemplateType.RESO_HW,
+        ]:
             self.include_reply.setChecked(False)
             self.include_reply.setEnabled(False)
         else:
@@ -896,7 +933,7 @@ class Window(FluentWindow):
         if self.scan_stop_btn.data == "scanning":
             self.view_model.handle_stream_stop(True)
             self.scan_stop_btn.setEnabled(False)
-            return 
+            return
 
         self.generate_doc_btn.setEnabled(False)
         self.stream_card.chatbox.setPlainText("")
@@ -914,7 +951,7 @@ class Window(FluentWindow):
 
             if success is True:
                 self.stream_card.chatbox.setPlainText("Preparing... ")
-                self.scan_stop_btn.data = "scanning" 
+                self.scan_stop_btn.data = "scanning"
                 self.scan_stop_btn.setText("Stop")
 
         except Exception as e:
@@ -931,9 +968,10 @@ class Window(FluentWindow):
             self.show_message_box("Error", str(doc.error))
 
     def update_chatbox(self, text: str):
-        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
+        self.stream_card.chatbox.moveCursor(
+            self.stream_card.chatbox.textCursor().MoveOperation.End
+        )
         self.stream_card.chatbox.insertPlainText(text)
-
 
     @pyqtSlot(bool)
     def _finished(self, state):
@@ -948,7 +986,7 @@ class Window(FluentWindow):
             self.show_message_box("Error", "RESTART THE APP")
             return
 
-        self.scan_stop_btn.data = 'not-scanning'
+        self.scan_stop_btn.data = "not-scanning"
         self.scan_stop_btn.setText("Scan PDF")
         self.scan_stop_btn.setEnabled(True)
 
@@ -958,24 +996,93 @@ class Window(FluentWindow):
         self.stream_card.chatbox.setPlainText("")
         self.scan_stop_btn.setText("Scan PDF")
 
-
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
-        self.stream_card.chatbox.moveCursor(self.stream_card.chatbox.textCursor().MoveOperation.End)
-        self.stream_card.chatbox.insertPlainText("\nOppsss...Something went wrong on my end.")
+        self.stream_card.chatbox.moveCursor(
+            self.stream_card.chatbox.textCursor().MoveOperation.End
+        )
+        self.stream_card.chatbox.insertPlainText(
+            "\nOppsss...Something went wrong on my end."
+        )
         self.generate_doc_btn.setEnabled(True)
 
+    def add_item(self, text, data = None):
+        queue_item = QueueItem(
+            text=text, 
+            icon=CFIF.ACTIVE, 
+            loop=False,
+            id=data,
+            dark_theme=self.cfg.darkTheme
+        )
+        list_item = QListWidgetItem(self.prototype_interface.left_w)
+        list_item.setSizeHint(queue_item.sizeHint())
+        self.prototype_interface.left_w.addItem(list_item)
+        self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
+
+    def set_queue_item_icon(self, id, icon, loop: bool = False):
+        queue_item = self.get_queue_item(id)
+        queue_item.set_icon(icon=icon, loop=loop)
+
+        if loop is True:
+            queue_item.icon_label.resume_animation()
+        else:
+            queue_item.set_icon(CFIF.STOPPED)
+            queue_item.icon_label.stop_animation(CFIF.STOPPED.path())
+
+    def get_queue_item(self, id) -> QueueItem:
+        list_items = self._get_queue_list_items()
+        for list_item in list_items:
+            list_item: QListWidgetItem = list_item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+            if queue_item.data == id:
+                return queue_item
+
+    def _get_queue_list_items(self) -> list[QListWidgetItem]:
+        items = [
+            self.prototype_interface.left_w.item(i)
+            for i in range(self.prototype_interface.left_w.count())
+        ]
+        return items
+
+    def _update_queue_list_item_icons(self):
+        items = self._get_queue_list_items()
+
+        for item in items:
+            item: QListWidgetItem = item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+            queue_item.set_icon(CFIF.ACTIVE)
+    
+    def _update_queue_list_item_theme(self, dark_theme):
+        items = self._get_queue_list_items()
+
+        for item in items:
+            item: QListWidgetItem = item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+            queue_item.change_theme(dark_theme)
+
+    @pyqtSlot(bool)
+    def _set_queue_list_text_visibility(self, hide: bool):
+        list_items = self._get_queue_list_items()
+
+        for list_item in list_items:
+            list_item: QListWidgetItem = list_item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+            if hide is True:
+                queue_item.hide_text()
+            else:
+                queue_item.show_text()
 
     def _prototype(self):
-        for i in range(5):  
-            item = QListWidgetItem()  
-            item.setIcon(QIcon(CFIF.URL))
-            item.setText(f"Item {i+1}")
-            self.selflist_prototype_interface.addItem(item)
+        try:
+            for i in range(5):
+                self.add_item(f"item {i}", i)
+        except Exception:
+            print(traceback.format_exc())
 
     def closeEvent(self, e):
         self.view_model.stop_agents()
         return super().closeEvent(e)
+
 
 def register_search_path(relative_path=None):
     relative_path = (
