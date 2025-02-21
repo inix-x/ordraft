@@ -405,12 +405,11 @@ class Window(FluentWindow):
         self.prototype_interface = SplitContainerWidget(
             object_name="Draft View",
             left_w=ListWidget(self),
-            right_w=Widget("Draft Assistant", self), # text in widget serve also as
-            parent=self)
+            right_w=Widget("Draft Assistant", self),  # text in widget serve also as
+            parent=self,
+        )
 
-        self.list_prototype_interface = Widget("Prototype list", self)
         self.selflist_prototype_interface = ListWidget(self)
-        self.list_prototype_interface.vBoxlayout.addWidget(self.selflist_prototype_interface)
 
         # Dependencies
         self.view_model = MainViewModel(Data())
@@ -482,7 +481,6 @@ class Window(FluentWindow):
             "Settings",
             NavigationItemPosition.BOTTOM,
         )
-        self.addSubInterface(self.list_prototype_interface, FIF.TILES, "List")
 
     def initWindow(self):
         self.resize(900, 700)
@@ -603,7 +601,7 @@ class Window(FluentWindow):
             self._updateStackedBackground()
             self.cfg.transparent_bg = transparent
 
-        # self._update_queue_list_item_theme(dark_theme)
+        self._update_queue_list_item_theme(dark_theme)
         self.cfg.save()
 
     def _show_change_api_url(self):
@@ -704,19 +702,15 @@ class Window(FluentWindow):
         )
 
         # File Control layout
-        controls._layout.addWidget(
-            self.save_location_btn, Qt.AlignmentFlag.AlignLeft
-        )
+        controls._layout.addWidget(self.save_location_btn, Qt.AlignmentFlag.AlignLeft)
         controls._layout.addWidget(
             self.open_save_location_btn, Qt.AlignmentFlag.AlignLeft
         )
-        controls._layout.addItem(spacer)        
+        controls._layout.addItem(spacer)
         controls._layout.addWidget(self.generate_doc_btn, Qt.AlignmentFlag.AlignRight)
 
         # Template Control Layout
-        template_control._layout.addWidget(
-            self.file_button, Qt.AlignmentFlag.AlignLeft
-        )
+        template_control._layout.addWidget(self.file_button, Qt.AlignmentFlag.AlignLeft)
         template_control._layout.addWidget(
             self.template_combobox, Qt.AlignmentFlag.AlignLeft
         )
@@ -848,11 +842,11 @@ class Window(FluentWindow):
         #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
         # )
 
-    # def connections(self):
-    #     self.scan_stop_btn_pr.clicked.connect(self._prototype)
-    #     self.prototype_interface.leftWidgetAtMinimum.connect(
-    #         self._set_queue_list_text_visibility
-    #     )
+    def connections(self):
+        self.scan_stop_btn_pr.clicked.connect(self._prototype)
+        self.prototype_interface.leftWidgetAtMinimum.connect(
+            self._set_queue_list_text_visibility
+        )
 
     def _browse(self, type: int):
         try:
@@ -1038,71 +1032,71 @@ class Window(FluentWindow):
         )
         self.generate_doc_btn.setEnabled(True)
 
-    # def add_item(self, text, data = None):
-    #     queue_item = QueueItem(
-    #         text=text, 
-    #         icon=CFIF.ACTIVE, 
-    #         loop=False,
-    #         id=data,
-    #         dark_theme=self.cfg.darkTheme.value
-    #     )
-    #     list_item = QListWidgetItem(self.prototype_interface.left_w)
-    #     list_item.setSizeHint(queue_item.sizeHint())
-    #     self.prototype_interface.left_w.addItem(list_item)
-    #     self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
+    def add_item(self, text, data = None):
+        queue_item = QueueItem(
+            text=text, 
+            icon=CFIF.ACTIVE, 
+            loop=False,
+            id=data,
+            dark_theme=self.cfg.darkTheme
+        )
+        list_item = QListWidgetItem(self.prototype_interface.left_w)
+        list_item.setSizeHint(queue_item.sizeHint())
+        self.prototype_interface.left_w.addItem(list_item)
+        self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
 
-    # def set_queue_item_icon(self, id, icon, loop: bool = False):
-    #     queue_item = self.get_queue_item(id)
-    #     queue_item.set_icon(icon=icon, loop=loop)
+    def set_queue_item_icon(self, id, icon, loop: bool = False):
+        queue_item = self.get_queue_item(id)
+        queue_item.set_icon(icon=icon, loop=loop)
 
-    #     if loop is True:
-    #         queue_item.icon_label.resume_animation()
-    #     else:
-    #         queue_item.set_icon(CFIF.STOPPED)
-    #         queue_item.icon_label.stop_animation(CFIF.STOPPED.path())
+        if loop is True:
+            queue_item.icon_label.resume_animation()
+        else:
+            queue_item.set_icon(CFIF.STOPPED)
+            queue_item.icon_label.stop_animation(CFIF.STOPPED.path())
 
-    # def get_queue_item(self, id) -> QueueItem:
-    #     list_items = self._get_queue_list_items()
-    #     for list_item in list_items:
-    #         list_item: QListWidgetItem = list_item
-    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
-    #         if queue_item.data == id:
-    #             return queue_item
+    def get_queue_item(self, id) -> QueueItem:
+        list_items = self._get_queue_list_items()
+        for list_item in list_items:
+            list_item: QListWidgetItem = list_item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+            if queue_item.data == id:
+                return queue_item
 
-    # def _get_queue_list_items(self) -> list[QListWidgetItem]:
-    #     items = [
-    #         self.prototype_interface.left_w.item(i)
-    #         for i in range(self.prototype_interface.left_w.count())
-    #     ]
-    #     return items
+    def _get_queue_list_items(self) -> list[QListWidgetItem]:
+        items = [
+            self.prototype_interface.left_w.item(i)
+            for i in range(self.prototype_interface.left_w.count())
+        ]
+        return items
 
-    # def _update_queue_list_item_icons(self):
-    #     items = self._get_queue_list_items()
+    def _update_queue_list_item_icons(self):
+        items = self._get_queue_list_items()
 
-    #     for item in items:
-    #         item: QListWidgetItem = item
-    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
-    #         queue_item.set_icon(CFIF.ACTIVE)
+        for item in items:
+            item: QListWidgetItem = item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+            queue_item.set_icon(CFIF.ACTIVE)
     
-    # def _update_queue_list_item_theme(self, dark_theme):
-    #     items = self._get_queue_list_items()
+    def _update_queue_list_item_theme(self, dark_theme):
+        items = self._get_queue_list_items()
 
-    #     for item in items:
-    #         item: QListWidgetItem = item
-    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
-    #         queue_item.change_theme(dark_theme)
+        for item in items:
+            item: QListWidgetItem = item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+            queue_item.change_theme(dark_theme)
 
-    # @pyqtSlot(bool)
-    # def _set_queue_list_text_visibility(self, hide: bool):
-    #     list_items = self._get_queue_list_items()
+    @pyqtSlot(bool)
+    def _set_queue_list_text_visibility(self, hide: bool):
+        list_items = self._get_queue_list_items()
 
-    #     for list_item in list_items:
-    #         list_item: QListWidgetItem = list_item
-    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
-    #         if hide is True:
-    #             queue_item.hide_text()
-    #         else:
-    #             queue_item.show_text()
+        for list_item in list_items:
+            list_item: QListWidgetItem = list_item
+            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+            if hide is True:
+                queue_item.hide_text()
+            else:
+                queue_item.show_text()
 
     def _prototype(self):
         try:
