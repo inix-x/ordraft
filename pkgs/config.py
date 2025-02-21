@@ -25,6 +25,8 @@ class DismissalGuidelines:
       - **Fallback & Disambiguation:** 
          - If only one date is present, do not assign it to both date fields.
          - If both dates are the same, then check the guidelines again for date of notice of violation.
+      - **date formatting:**
+         - always format the date as dd/month/yyy
 
    2. **Pattern Matching Node:**
       - Extract the `case_number` ensuring it starts with the prefix `"NOV-EMB-NCR"`.
@@ -71,10 +73,12 @@ RESO_DEFAULT_GUIDELINES = '''
 2. `location` is the complete address of the establishment or the client.  
 3. `client_name` is found immediately before `location` (may include a personal name and/or a company name).  
 4. `decision_from_order`:  
-- **STRICTLY** Copy the decision that can be found starting from WHEREFORE,
-- This can be a 2 paragraph or just one.
+- **STRICTLY** Copy the decision that can be found starting from 'WHEREFORE' and stop just before 'SO ORDERED.
+- if the decision from order has '.', add \\t\\n\\n between after '.'.
 5. `date_of_motion_for_recon`: this can be found on paragraph containing 'Respondent submitted its Position Paper'.
 6. 'date_of_order' is found after the wherefore or before the signing section of regional director.
+7 **date formatting:**
+   - always format the date as dd month yyyy
 '''
 DEFAULT_INSTRUCTIONS = '''**INSTRUCTIONS**  
 1. Carefully read the entire PDF_TEXT.  

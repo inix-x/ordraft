@@ -62,6 +62,9 @@ class Config(QConfig):
     transparent_bg = ConfigItem(
         "MainWindow", "TransparentSubInterface", False, BoolValidator()
     )
+    save_location = ConfigItem(
+        "App", "SaveLocation", ""
+    )
 
 
 class Container(QFrame):
@@ -443,6 +446,7 @@ class Window(FluentWindow):
 
             qconfig.load(file_path, self.cfg)
             self._load_theme()
+            self._load_app_settings()
         except Exception:
             print(traceback.format_exc())
 
@@ -454,13 +458,19 @@ class Window(FluentWindow):
 
         setTheme(Theme.DARK if dark_mode else Theme.LIGHT)
 
-        (
+        ( 
             """QLabel { color: #FF7043; }"""
             if dark_mode
             else """QLabel { color: #D32F2F; }"""
         )
         setThemeColor(QColor("#3CB969"))
         self.cfg.save()
+
+    def _load_app_settings(self):
+        save_loc = self.cfg.save_location.value
+
+        if not len(save_loc) == 0:
+            self._save_location(save_loc)
 
     def initNavigation(self):
         self.addSubInterface(self.dismissal_interface, FIF.DOCUMENT, "Draft Dismissal")
@@ -576,7 +586,7 @@ class Window(FluentWindow):
         if dark_theme is not None:
             setTheme(Theme.DARK if dark_theme else Theme.LIGHT)
 
-            self.prototype_interface.setSplitterTheme(dark_theme)
+            # self.prototype_interface.setSplitterTheme(dark_theme)
             self.cfg.darkTheme = dark_theme
 
             style = (
@@ -591,7 +601,7 @@ class Window(FluentWindow):
             self._updateStackedBackground()
             self.cfg.transparent_bg = transparent
 
-        self._update_queue_list_item_theme(dark_theme)
+        # self._update_queue_list_item_theme(dark_theme)
         self.cfg.save()
 
     def _show_change_api_url(self):
@@ -862,12 +872,28 @@ class Window(FluentWindow):
             else:
                 directory = QFileDialog.getExistingDirectory(self, "Select Directory")
                 if not (directory is None or len(directory) == 0):
-                    self.save_location_btn.data = directory
-                    text = self.view_model._truncate_string(directory, 14)
-                    self.save_location_btn.setText(text)
+                    self._save_location(directory=directory)
 
         except Exception:
             print(traceback.format_exc())
+
+    def _save_location(self, directory):
+        if not os.path.exists(directory) and len(directory) == 0:
+            raise IOError("Directory not found")
+
+        self.save_location_btn.data = directory
+        _directory = os.path.basename(directory)
+        text = self.view_model._truncate_string(_directory, 14)
+
+        if len(text) == 0:
+            text = "Save Location"
+
+        self.save_location_btn.setText(text)
+        
+        if self.cfg.save_location != directory:
+            self.cfg.save_location.value = directory
+            
+        self.cfg.save()
 
     @pyqtSlot(str)
     def _update_template_combobox(self, text):
@@ -876,7 +902,7 @@ class Window(FluentWindow):
             TemplateType.RESO_AIR,
             TemplateType.RESO_HW,
             TemplateType.RESO_WATER,
-            TemplateType.RESO_HW,
+            TemplateType.RESO_PD,
         ]:
             self.include_reply.setChecked(False)
             self.include_reply.setEnabled(False)
@@ -1006,71 +1032,71 @@ class Window(FluentWindow):
         )
         self.generate_doc_btn.setEnabled(True)
 
-    def add_item(self, text, data = None):
-        queue_item = QueueItem(
-            text=text, 
-            icon=CFIF.ACTIVE, 
-            loop=False,
-            id=data,
-            dark_theme=self.cfg.darkTheme.value
-        )
-        list_item = QListWidgetItem(self.prototype_interface.left_w)
-        list_item.setSizeHint(queue_item.sizeHint())
-        self.prototype_interface.left_w.addItem(list_item)
-        self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
+    # def add_item(self, text, data = None):
+    #     queue_item = QueueItem(
+    #         text=text, 
+    #         icon=CFIF.ACTIVE, 
+    #         loop=False,
+    #         id=data,
+    #         dark_theme=self.cfg.darkTheme.value
+    #     )
+    #     list_item = QListWidgetItem(self.prototype_interface.left_w)
+    #     list_item.setSizeHint(queue_item.sizeHint())
+    #     self.prototype_interface.left_w.addItem(list_item)
+    #     self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
 
-    def set_queue_item_icon(self, id, icon, loop: bool = False):
-        queue_item = self.get_queue_item(id)
-        queue_item.set_icon(icon=icon, loop=loop)
+    # def set_queue_item_icon(self, id, icon, loop: bool = False):
+    #     queue_item = self.get_queue_item(id)
+    #     queue_item.set_icon(icon=icon, loop=loop)
 
-        if loop is True:
-            queue_item.icon_label.resume_animation()
-        else:
-            queue_item.set_icon(CFIF.STOPPED)
-            queue_item.icon_label.stop_animation(CFIF.STOPPED.path())
+    #     if loop is True:
+    #         queue_item.icon_label.resume_animation()
+    #     else:
+    #         queue_item.set_icon(CFIF.STOPPED)
+    #         queue_item.icon_label.stop_animation(CFIF.STOPPED.path())
 
-    def get_queue_item(self, id) -> QueueItem:
-        list_items = self._get_queue_list_items()
-        for list_item in list_items:
-            list_item: QListWidgetItem = list_item
-            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
-            if queue_item.data == id:
-                return queue_item
+    # def get_queue_item(self, id) -> QueueItem:
+    #     list_items = self._get_queue_list_items()
+    #     for list_item in list_items:
+    #         list_item: QListWidgetItem = list_item
+    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+    #         if queue_item.data == id:
+    #             return queue_item
 
-    def _get_queue_list_items(self) -> list[QListWidgetItem]:
-        items = [
-            self.prototype_interface.left_w.item(i)
-            for i in range(self.prototype_interface.left_w.count())
-        ]
-        return items
+    # def _get_queue_list_items(self) -> list[QListWidgetItem]:
+    #     items = [
+    #         self.prototype_interface.left_w.item(i)
+    #         for i in range(self.prototype_interface.left_w.count())
+    #     ]
+    #     return items
 
-    def _update_queue_list_item_icons(self):
-        items = self._get_queue_list_items()
+    # def _update_queue_list_item_icons(self):
+    #     items = self._get_queue_list_items()
 
-        for item in items:
-            item: QListWidgetItem = item
-            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
-            queue_item.set_icon(CFIF.ACTIVE)
+    #     for item in items:
+    #         item: QListWidgetItem = item
+    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+    #         queue_item.set_icon(CFIF.ACTIVE)
     
-    def _update_queue_list_item_theme(self, dark_theme):
-        items = self._get_queue_list_items()
+    # def _update_queue_list_item_theme(self, dark_theme):
+    #     items = self._get_queue_list_items()
 
-        for item in items:
-            item: QListWidgetItem = item
-            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
-            queue_item.change_theme(dark_theme)
+    #     for item in items:
+    #         item: QListWidgetItem = item
+    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
+    #         queue_item.change_theme(dark_theme)
 
-    @pyqtSlot(bool)
-    def _set_queue_list_text_visibility(self, hide: bool):
-        list_items = self._get_queue_list_items()
+    # @pyqtSlot(bool)
+    # def _set_queue_list_text_visibility(self, hide: bool):
+    #     list_items = self._get_queue_list_items()
 
-        for list_item in list_items:
-            list_item: QListWidgetItem = list_item
-            queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
-            if hide is True:
-                queue_item.hide_text()
-            else:
-                queue_item.show_text()
+    #     for list_item in list_items:
+    #         list_item: QListWidgetItem = list_item
+    #         queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
+    #         if hide is True:
+    #             queue_item.hide_text()
+    #         else:
+    #             queue_item.show_text()
 
     def _prototype(self):
         try:

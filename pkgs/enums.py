@@ -61,11 +61,11 @@ class TemplateFile(Enum):
 
     @staticmethod
     def get_template_filetype(template_type: TemplateType):
-        if template_type == TemplateType.DISMISSAL_AIR:
+        if template_type in [TemplateType.DISMISSAL_AIR, TemplateType.RESO_AIR]:
             return "AIR"
-        if template_type == TemplateType.DISMISSAL_PD:
+        if template_type in [TemplateType.DISMISSAL_PD, TemplateType.RESO_PD]:
             return "PD"
-        if template_type == TemplateType.DISMISSAL_WATER:
+        if template_type in [TemplateType.DISMISSAL_WATER, TemplateType.RESO_WATER]:
             return "WATER"
-        if template_type == TemplateType.DISMISSAL_HW:
+        if template_type in [TemplateType.DISMISSAL_HW, TemplateType.RESO_HW]:
             return "HW"
