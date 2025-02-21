@@ -16,6 +16,20 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "Clear Cache",
+            "type": "shell",
+            "command": "cmd",
+            "args": [
+                "/c",
+                "workon ordraft && python -c \"import pathlib; [print(f'Deleting: {p}') or p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]\""
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

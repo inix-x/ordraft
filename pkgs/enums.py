@@ -14,6 +14,7 @@ class TemplateType(Enum):
     RESO_PD = "Resolution - PD"
     RESO_WATER = "Resolution - Water"
 
+
 class TemplateFile(Enum):
     DISMISSAL_HW_REPLY = "templates/order_hw_reply.docx"
     DISMISSAL_HW_NO_REPLY = "templates/order_hw_no_reply.docx"
@@ -57,3 +58,14 @@ class TemplateFile(Enum):
             return TemplateFile.RESO_AIR.value
         else:
             raise ValueError(f"No template available for {template_type.value}")
+
+    @staticmethod
+    def get_template_filetype(template_type: TemplateType):
+        if template_type == TemplateType.DISMISSAL_AIR:
+            return "AIR"
+        if template_type == TemplateType.DISMISSAL_PD:
+            return "PD"
+        if template_type == TemplateType.DISMISSAL_WATER:
+            return "WATER"
+        if template_type == TemplateType.DISMISSAL_HW:
+            return "HW"

@@ -1,5 +1,7 @@
 import os
 
+from .enums import TemplateType, TemplateFile
+
 class Data:
     @property
     def app_data_path(self):
@@ -12,13 +14,14 @@ class Utils:
         os.makedirs(path, exist_ok=True)
 
     @staticmethod
-    def get_unique_filename(save_location, filename, extension="docx"):
+    def get_unique_filename(save_location, filename, template_type: TemplateType, extension="docx"):
         """Generate a unique filename by adding a numeric suffix if the file exists."""
-        path = os.path.join(save_location, f"{filename}.{extension}")
+        suffix = TemplateFile.get_template_filetype(template_type)
+        path = os.path.join(save_location, f"{filename}_{suffix}.{extension}")
         counter = 1
 
         while os.path.exists(path):
-            path = os.path.join(save_location, f"{filename}_{counter}.{extension}")
+            path = os.path.join(save_location, f"{filename}_{suffix}_{counter}.{extension}")
             counter += 1
 
         return os.path.realpath(path)

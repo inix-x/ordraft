@@ -13,7 +13,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.config import (
-    DISMISSAL_DEFAULT_GUIDELINES,
+    DismissalGuidelines,
     DEFAULT_INSTRUCTIONS,
     IMPORTANT_PROMPT,
     DISMISSAL_TEMPLATE,
@@ -157,7 +157,7 @@ class ModelLLM(QObject):
             dict: The JSON payload as a dictionary.
         """
         # Choose custom prompt if available, otherwise default guidelines
-        guidelines = custom_prompt if custom_prompt else DISMISSAL_DEFAULT_GUIDELINES
+        guidelines = custom_prompt if custom_prompt else DismissalGuidelines
 
         user_prompt = f"""
         **TASK**  
