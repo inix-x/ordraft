@@ -399,12 +399,12 @@ class Window(FluentWindow):
         # Interface
         self.dismissal_interface = Widget("Draft", self)
         self.settings_interface = Widget("Settings", self)
-        self.prototype_interface = SplitContainerWidget(
-            object_name="Draft View",
-            left_w=ListWidget(self),
-            right_w=Widget("Draft Assistant", self),  # text in widget serve also as
-            parent=self,
-        )
+        # self.prototype_interface = SplitContainerWidget(
+        #     object_name="Draft View",
+        #     left_w=ListWidget(self),
+        #     right_w=Widget("Draft Assistant", self),  # text in widget serve also as
+        #     parent=self,
+        # )
 
         self.selflist_prototype_interface = ListWidget(self)
 
@@ -426,7 +426,7 @@ class Window(FluentWindow):
         self._load_config()
         self._components()
 
-        size = QSize(1150, 600)
+        size = QSize(800, 600) # 1150, 600
         self.setMinimumSize(size)
         self.setBaseSize(size)
         self.resize(size)
@@ -464,7 +464,7 @@ class Window(FluentWindow):
 
     def initNavigation(self):
         self.addSubInterface(self.dismissal_interface, FIF.DOCUMENT, "Draft Dismissal")
-        self.addSubInterface(self.prototype_interface, FIF.LABEL, "Draft Assistant")
+        # self.addSubInterface(self.prototype_interface, FIF.LABEL, "Draft Assistant")
         self.addSubInterface(
             self.settings_interface,
             FIF.SETTING,
