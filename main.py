@@ -1038,7 +1038,7 @@ class Window(FluentWindow):
             icon=CFIF.ACTIVE, 
             loop=False,
             id=data,
-            dark_theme=self.cfg.darkTheme
+            dark_theme=self.cfg.darkTheme.value
         )
         list_item = QListWidgetItem(self.prototype_interface.left_w)
         list_item.setSizeHint(queue_item.sizeHint())
