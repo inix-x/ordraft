@@ -1,6 +1,9 @@
 import os
 import sys
 from typing import Optional
+import os
+import sys
+from typing import Optional
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -12,6 +15,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QApplication,
+    QSizePolicy,
     QSizePolicy,
 )
 from PyQt6.QtCore import (
@@ -51,7 +55,7 @@ class PulsatingSvgLabel(QLabel):
     def start_animation(self):
         # Animation for scaling up from 0.75 to 1.
         animation_up = QPropertyAnimation(self, b"scaleFactor")
-        animation_up.setStartValue(0.60)
+        animation_up.setStartValue(0.75)
         animation_up.setEndValue(1)
         animation_up.setDuration(1000)
         animation_up.setEasingCurve(QEasingCurve.Type.InOutQuad)
@@ -59,7 +63,7 @@ class PulsatingSvgLabel(QLabel):
         # Animation for scaling down from 1 to 0.75.
         animation_down = QPropertyAnimation(self, b"scaleFactor")
         animation_down.setStartValue(1)
-        animation_down.setEndValue(0.60)
+        animation_down.setEndValue(0.75)
         animation_down.setDuration(1000)
         animation_down.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
@@ -117,7 +121,7 @@ class PulsatingSvgLabel(QLabel):
 
     def resume_animation(self):
         """
-        Smoothly resumes the pulsating animation by first transitioning to the starting scale (0.60)
+        Smoothly resumes the pulsating animation by first transitioning to the starting scale (0.75)
         and then restarting the pulsating animation group.
         """
         # If the pulsation group is already running, do nothing.
@@ -127,7 +131,7 @@ class PulsatingSvgLabel(QLabel):
         # Create an animation to transition from the current scale to 0.75.
         self.resume_anim = QPropertyAnimation(self, b"scaleFactor")
         self.resume_anim.setStartValue(self._scaleFactor)
-        self.resume_anim.setEndValue(0.60)
+        self.resume_anim.setEndValue(0.75)
         self.resume_anim.setDuration(1000)
         self.resume_anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
         # Once this transition finishes, rebuild and start the pulsating animation.
@@ -141,14 +145,14 @@ class PulsatingSvgLabel(QLabel):
         self.animationGroup = QSequentialAnimationGroup(self)
 
         animation_up = QPropertyAnimation(self, b"scaleFactor")
-        animation_up.setStartValue(0.60)
+        animation_up.setStartValue(0.75)
         animation_up.setEndValue(1)
         animation_up.setDuration(1000)
         animation_up.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
         animation_down = QPropertyAnimation(self, b"scaleFactor")
         animation_down.setStartValue(1)
-        animation_down.setEndValue(0.60)
+        animation_down.setEndValue(0.75)
         animation_down.setDuration(1000)
         animation_down.setEasingCurve(QEasingCurve.Type.InOutQuad)
 
@@ -254,11 +258,21 @@ class AutoResizeLabel(QLabel):
         super().__init__(text, parent)
         self.setStyleSheet("color: green;")
         self.adjustSize()
+        self.adjustSize()
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def setText(self, text):
         super().setText(text)
+
+    def setText(self, text):
+        super().setText(text)
         self.adjustSize()
+
+
+
+class CustomListItem(QWidget):
+    def __init__(self, status, name, parent=None, id=None):
+        super().__init__(parent)
 
 
 
@@ -271,14 +285,25 @@ class CustomListItem(QWidget):
         layout = QHBoxLayout(self)
 
         self.status = AutoResizeLabel(status)
+
+        self.status = AutoResizeLabel(status)
         self.status.setStyleSheet("color: #63FF9A;")
 
         self.name = QLabel(name)
 
         self.button = QPushButton()
+
+        self.button = QPushButton()
         self.button.setIconSize(QSize(16, 16))
         self.button.setFixedSize(QSize(24, 24))
+        self.button.setFixedSize(QSize(24, 24))
 
+        layout.addWidget(self.status)
+        layout.addWidget(self.name, stretch=1, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.button)
+
+        layout.setContentsMargins(8, 4, 8, 4)
+        self.setLayout(layout)
         layout.addWidget(self.status)
         layout.addWidget(self.name, stretch=1, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self.button)
@@ -309,7 +334,32 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         self.list_widget = QListWidget()
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("List Widget with Custom Items")
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        self.list_widget = QListWidget()
         self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        main_layout.addWidget(self.list_widget)
+
+        for i in range(5):
+            item = QListWidgetItem()
+            custom_widget = CustomListItem(f"Item {i+1}")
+
+            custom_widget.button.clicked.connect(
+                lambda checked, index=i: self.on_button_clicked(index)
+            )
+
+            item.setSizeHint(custom_widget.sizeHint())
+
+            self.list_widget.addItem(item)
+
+            self.list_widget.setItemWidget(item, custom_widget)
         main_layout.addWidget(self.list_widget)
 
         for i in range(5):
@@ -328,6 +378,8 @@ class MainWindow(QMainWindow):
 
     def on_button_clicked(self, index):
         print(f"Button in item {index+1} clicked!")
+    def on_button_clicked(self, index):
+        print(f"Button in item {index+1} clicked!")
 
 
 def main():
@@ -335,7 +387,14 @@ def main():
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+def main():
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
 
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()
