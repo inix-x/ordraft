@@ -71,17 +71,16 @@ class WordPlaceholderReplacer:
             replacements (dict): A dictionary where keys are placeholder names.
         """
         def escape_xml(value):
-            """Escape XML special characters in strings and ensure each string ends with a period."""  
-            if isinstance(value, str):  
-                escaped = saxutils.escape(value)  
-                
-                if not escaped.endswith('.'):  
-                    escaped += '.'  
-                return escaped  
-            elif isinstance(value, list):  
-                
-                return [escape_xml(item) for item in value]  
-            return value  
+            """Escape XML special characters and ensure each string in a list ends with a period."""
+            if isinstance(value, str):
+                escaped = saxutils.escape(value)
+                return escaped
+            elif isinstance(value, list):
+                return [
+                    saxutils.escape(item) + '.' if not item.endswith('.') else saxutils.escape(item)
+                    for item in value
+                ]
+            return value
 
         clean = {
             key: escape_xml(value) for key, value in replacements.items()

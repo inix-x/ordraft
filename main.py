@@ -422,7 +422,7 @@ class Window(FluentWindow):
         self.initWindow()
         self.settings_setup_ui()
         self.dismissal_setup_ui()
-        self.draft_setup_ui()
+        # self.draft_setup_ui()
         self._load_config()
         self._components()
 
@@ -431,7 +431,7 @@ class Window(FluentWindow):
         self.setBaseSize(size)
         self.resize(size)
 
-        self.connections()
+        # self.connections()
 
     def _load_config(self):
         try:
@@ -819,24 +819,24 @@ class Window(FluentWindow):
         )
 
         # Dismissal Layout
-        self.prototype_interface.right_w.vBoxlayout.addWidget(
-            self.stream_view,
-            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        )
-        self.prototype_interface.right_w.vBoxlayout.addWidget(
-            template_control,
-            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        )
-        self.prototype_interface.right_w.vBoxlayout.addWidget(
-            controls,
-            alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
-        )
+        # self.prototype_interface.right_w.vBoxlayout.addWidget(
+        #     self.stream_view,
+        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        # )
+        # self.prototype_interface.right_w.vBoxlayout.addWidget(
+        #     template_control,
+        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        # )
+        # self.prototype_interface.right_w.vBoxlayout.addWidget(
+        #     controls,
+        #     alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        # )
 
-    def connections(self):
-        self.scan_stop_btn_pr.clicked.connect(self._prototype)
-        self.prototype_interface.leftWidgetAtMinimum.connect(
-            self._set_queue_list_text_visibility
-        )
+    # def connections(self):
+    #     self.scan_stop_btn_pr.clicked.connect(self._prototype)
+    #     self.prototype_interface.leftWidgetAtMinimum.connect(
+    #         self._set_queue_list_text_visibility
+    #     )
 
     def _browse(self, type: int):
         try:
