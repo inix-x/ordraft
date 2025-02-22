@@ -11,6 +11,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     )
 
 from pkgs.enums import TemplateType, Models, DocumentStatus
+from pkgs.enums import TemplateType, Models, DocumentStatus
 
 @dataclass
 class GenerateDocData:

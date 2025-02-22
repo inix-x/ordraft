@@ -274,12 +274,6 @@ class CustomListItem(QWidget):
     def __init__(self, status, name, parent=None, id=None):
         super().__init__(parent)
 
-
-
-class CustomListItem(QWidget):
-    def __init__(self, status, name, parent=None, id=None):
-        super().__init__(parent)
-
         self._uuid = id
 
         layout = QHBoxLayout(self)

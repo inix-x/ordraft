@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum, auto, auto
 
 class Models(Enum):
     deepseek_r1_distill_llama_8b = "deepseek-r1-distill-llama-8b"

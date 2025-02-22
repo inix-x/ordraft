@@ -11,14 +11,14 @@ import subprocess
 
 
 from PyQt6.QtCore import (
-    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal, QTimer
+    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal, QTimer, QTimer
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
     QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
     QWidget
 )
-from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence
+from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence, QKeySequence
 
 from qfluentwidgets import (
     NavigationItemPosition, FluentWindow, SubtitleLabel, setFont, QConfig,
@@ -127,8 +127,7 @@ class SplitContainerWidget(QFrame):
 
         self.left_w: ListWidget = left_w
         self.left_w.setUniformItemSizes(True)
-        self.left_w.setSortingEnabled(False)
-        self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.left_w.setBaseSize(QSize(55, self.left_w.height()))
         self.left_w.setMinimumWidth(55)
         self.left_w.setMaximumWidth(175)
