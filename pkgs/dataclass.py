@@ -10,7 +10,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
     )
 
-from .enums import TemplateType, Models
+from pkgs.enums import TemplateType, Models, DocumentStatus
 
 @dataclass
 class GenerateDocData:
@@ -64,7 +64,8 @@ class Document:
     doc_payload: DocPayload
     _uuid: str = field(init=False, repr=False)  
     file_name: str | None = field(default=None)
-    _save_filepath: str = field(init=False, repr=False)  
+    _save_filepath: str = field(init=False, repr=False)
+    status: DocumentStatus = field(default=DocumentStatus.NEW)
 
     def __post_init__(self):
         self.save_filepath = ""

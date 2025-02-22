@@ -18,7 +18,7 @@ from pkgs.api import ModelLLM
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.dataclass import GenerateDocData, DocPayload, DocumentsCollection, Document, UpdateDocData
 from pkgs.misc import Data
-from pkgs.enums import TemplateFile
+from pkgs.enums import TemplateFile, TemplateType
 from pkgs.list_widget import CustomListItem
 
 
@@ -29,7 +29,7 @@ class MainViewModel(QObject):
     processing_finished = pyqtSignal(bool)
     updateDocStatus = pyqtSignal(Document)
     modelProcessed = pyqtSignal(Document)
-    docEvents = pyqtSignal(UpdateDocData, str)
+    docEvents = pyqtSignal(Document)
     docOpened = pyqtSignal(str, object)
 
     chatbox_update = pyqtSignal(str)
@@ -86,32 +86,39 @@ class MainViewModel(QObject):
             doc_payload.validate()
             document = Document(
                 temp_doc_data=data,
-                doc_payload=doc_payload
-            )
-            doc_status = UpdateDocData(
-                id=document.id,
-                status="Queued",
-                name=os.path.basename(data.pdf_path)[0]
+                doc_payload=doc_payload,
             )
             self.documents.add(document)
             self._document = document
-            self.docEvents.emit(doc_status, document.id)
-            template_file = TemplateFile.get_template_file(data.selected_template, data.is_reply_included)
-            template_filepath = os.path.join(
-                self._data_model.app_data_path, template_file
-            )
+            self.docEvents.emit(document)
+            self.set_template(data.selected_template, data.is_reply_included)
         except Exception as ve:
             print(traceback.format_exc())
             self.errorOccured.emit(str(ve))
             return False, ve
+            
         try:
-            self.word_processor.template_filepath = template_filepath
             # self._api_worker.add_task(data=document)
             self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
             return True, None
         except Exception as e:
             self.errorOccured.emit(str(e))
             return False, e
+        
+    def set_template(self, selected_template: TemplateType, is_reply_included: bool = False):
+        try:
+            if not isinstance(selected_template, TemplateType):
+                raise TypeError("selected template is not a valid TemplateType")
+            if selected_template is None:
+                raise ValueError("Selected template is None")            
+                
+            template_file = TemplateFile.get_template_file(selected_template, is_reply_included)
+            template_filepath = os.path.join(self._data_model.app_data_path, template_file)
+            
+            self.word_processor.template_filepath = template_filepath
+        except Exception as e:
+            print(traceback.format_exc())
+            self.errorOccured.emit(str(e))
 
     def is_new_session(self, pdf_file_path) -> bool:
         try:

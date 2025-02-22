@@ -1,6 +1,6 @@
 from pkgs.api import ApiWorker
 from pkgs.config import DismissalGuidelines, DEFAULT_INSTRUCTIONS, URL, ORDRAFT_USER, ORDRAFT_ADMIN
-from pkgs.enums import TemplateFile, TemplateType, Models
+from pkgs.enums import TemplateFile, TemplateType, Models, DocumentStatus
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.main_vm import MainViewModel
 from pkgs.dataclass import (
@@ -18,10 +18,11 @@ from pkgs.list_widget import CustomListItem, QueueItem
 from pkgs.handlers import SettingsViewModel
 from pkgs.models import SettingsModel, CloudLLM, StateLLM
 from pkgs.workers import AgentWorker, BackgroundWorker
-from pkgs.views import InfoBars
+from pkgs.views import InfoBars, CommandBarCard 
 from pkgs.utils import create_layout
 
 __all__ = [
+    "CommandBarCard",
     "QueueItem",
     "Models",
     "SettingsViewModel",
@@ -46,5 +47,6 @@ __all__ = [
     "AgentWorker", 
     "BackgroundWorker",
     "CloudLLM",
-    "StateLLM"
+    "StateLLM",
+    "InforBars"
 ]
