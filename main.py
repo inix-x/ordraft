@@ -11,14 +11,14 @@ import subprocess
 
 
 from PyQt6.QtCore import (
-    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal
+    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal, QTimer
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
     QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
     QWidget
 )
-from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices
+from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence
 
 from qfluentwidgets import (
     NavigationItemPosition, FluentWindow, SubtitleLabel, setFont, QConfig,
@@ -27,7 +27,7 @@ from qfluentwidgets import (
     isDarkTheme, IconWidget, BodyLabel, TransparentToolButton, 
     PlainTextEdit, ComboBox, ListWidget,
     CheckBox, MessageBoxBase, LineEdit,
-    PushSettingCard,
+    PushSettingCard, Action
 )
 from qfluentwidgets.common import (
     ConfigItem, BoolValidator, FluentIconBase
@@ -36,11 +36,13 @@ from qfluentwidgets import FluentIcon as FIF
 
 
 from pkgs.icons import MyFluentIcon as CFIF
+from pkgs.icons import CommandBarIcon as CBFIF
 
 
 from pkgs import (
     URL, TemplateType, MainViewModel,
-    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout
+    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout,
+    QueueItem, CommandBarCard
 )
 
 # fmt: on
@@ -79,12 +81,12 @@ class Container(QFrame):
 
 class Widget(QFrame):
 
-    def __init__(self, text: str, parent=None):
+    def __init__(self, text: str = None, parent=None):
         super().__init__(parent=parent)
-        self.label = SubtitleLabel(text, self)
         self.vBoxlayout = QVBoxLayout(self)
         self.vBoxlayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        self.label = SubtitleLabel(text, self)
         setFont(self.label, 24)
         self.label.setAlignment(
             Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter
@@ -113,13 +115,20 @@ class SplitContainerWidget(QFrame):
             raise ValueError("left_w expects a ListWidget")
         if right_w is None:
             raise ValueError("right_w expects a widget")
+        
+        self.title = SubtitleLabel(text, self)
+        self.title.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        setFont(self.title, 24)
+
+        self.commandbar_card = CommandBarCard(self)
 
         self.splitter = QSplitter(Qt.Orientation.Horizontal, self)
 
         self.left_w: ListWidget = left_w
         self.left_w.setUniformItemSizes(True)
         self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.left_w.setMinimumWidth(53)
+        self.left_w.setBaseSize(QSize(55, self.left_w.height()))
+        self.left_w.setMinimumWidth(55)
         self.left_w.setMaximumWidth(175)
 
         self.right_w: Union[QWidget, Widget, Container] = right_w
@@ -127,17 +136,21 @@ class SplitContainerWidget(QFrame):
         self.splitter.addWidget(self.left_w)
         self.splitter.addWidget(self.right_w)
 
-        self.splitter.setSizes([150, 450])
+        self.splitter.setSizes([55, 450])
+
+        
 
         layout = QVBoxLayout(self)
+        layout.addWidget(self.title)
 
-        if text is not None:
-            self.label = SubtitleLabel(text, self)
-            self.label.setAlignment(
-                Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter
-            )
-            setFont(self.label, 24)
-            layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignTop)
+        layout.addWidget(self.commandbar_card)
+        # if text is not None:
+        #     self.label = SubtitleLabel(text, self)
+        #     self.label.setAlignment(
+        #         Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignCenter
+        #     )
+        #     setFont(self.label, 24)
+        #     layout.addWidget(self.label, 0, Qt.AlignmentFlag.AlignTop)
 
         layout.addWidget(self.splitter, 2)
 
@@ -145,7 +158,9 @@ class SplitContainerWidget(QFrame):
 
         self.splitter.splitterMoved.connect(self.check_left_widget_width)
 
-    def check_left_widget_width(self, pos: int, index: int):
+    def check_left_widget_width(self):
+        print(self.left_w.width())
+        print(self.splitter.sizes())
         if self.left_w.width() <= self.left_w.minimumWidth() + 32: 
             self.leftWidgetAtMinimum.emit(True)
         else:
@@ -167,6 +182,18 @@ class SplitContainerWidget(QFrame):
             }}
         """
         self.splitter.setStyleSheet(splitter_style)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # new: Use QTimer to ensure the sizes are set after the event loop has processed the layout.
+        QTimer.singleShot(0, self.adjustSplitterSizes)
+
+    # new: Method to adjust the splitter sizes after the widget has been shown.
+    def adjustSplitterSizes(self):
+        totalWidth = self.splitter.width()
+        # Set the left widget to 55 and allocate the remaining width to the right widget.
+        self.splitter.setSizes([55, totalWidth - 55])
+
 
 
 class CustomPushSettingCard(PushSettingCard):
@@ -357,11 +384,9 @@ class AIStreamCard(CardWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("AI Stream Output")
-
+        # self.setWindowTitle("AI Stream Output")
+        self.setBackgroundColor(self._normalBackgroundColor())
         self.setClickEnabled(False)
-
-        self._hover = False
 
         self.chatbox = PlainTextEdit(self)
         self.chatbox.setReadOnly(True)
@@ -372,16 +397,10 @@ class AIStreamCard(CardWidget):
         self.setLayout(layout)
 
     def _hoverBackgroundColor(self):
-        if self._hover:
-            return CardWidget()._hoverBackgroundColor()
-        else:
-            return CardWidget()._normalBackgroundColor()
+        return CardWidget()._normalBackgroundColor()
 
     def _pressedBackgroundColor(self):
-        if self._hover:
-            return CardWidget()._pressedBackgroundColor()
-        else:
-            return CardWidget()._normalBackgroundColor()
+        return CardWidget()._normalBackgroundColor()
 
     def append_stream(self, text: str):
         """
@@ -399,12 +418,13 @@ class Window(FluentWindow):
         self.cfg = Config()
 
         # Interface
-        self.dismissal_interface = Widget("Draft", self)
-        self.settings_interface = Widget("Settings", self)
+        self.dismissal_interface = Widget(text="Draft", parent=self)
+        self.settings_interface = Widget(text="Settings", parent=self)
         self.prototype_interface = SplitContainerWidget(
             object_name="Draft View",
+            text="Draft Assistant",
             left_w=ListWidget(self),
-            right_w=Widget("Draft Assistant", self),  # text in widget serve also as
+            right_w=Widget(text="Draft Assistant", parent=self),  # text in widget serve also as
             parent=self,
         )
 
@@ -474,6 +494,7 @@ class Window(FluentWindow):
             if dark_mode
             else """QLabel { color: #D32F2F; }"""
         )
+        self.prototype_interface.setSplitterTheme(dark_mode)
         setThemeColor(QColor("#3CB969"))
         self.cfg.save()
 
@@ -748,6 +769,10 @@ class Window(FluentWindow):
         # controls.hBoxlayout.addWidget()
 
     def draft_setup_ui(self):
+        self.draft_command_bar_ui()
+
+        self.prototype_interface.right_w.label.hide()
+
         self.stream_view = AIStreamCard()
         self.stream_view.setFixedWidth(725)
         self.stream_view.setMinimumWidth(725)
@@ -834,7 +859,7 @@ class Window(FluentWindow):
         )
         template_control._layout.addWidget(
             self.include_reply_pr, Qt.AlignmentFlag.AlignLeft
-        )
+        ) 
         template_control._layout.addWidget(
             self.scan_stop_btn_pr, Qt.AlignmentFlag.AlignLeft
         )
@@ -852,6 +877,25 @@ class Window(FluentWindow):
             controls,
             alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
         )
+
+    def draft_command_bar_ui(self):
+        self.new_document_action = Action(
+            FIF.ADD,
+            "New Document",
+            shortcut=QKeySequence("ctrl+n"),
+            triggered=lambda: print("here"),
+        )
+        # self.new_document_action.setEnabled(False)
+        self.prototype_interface.commandbar_card.commandbar.addAction(self.new_document_action)
+
+        self.prototype_interface.commandbar_card.commandbar.addSeparator()
+
+        self.ai_assistant_action = Action(CBFIF.AI_ASSISTANT, "Use Assistant", checkable=True)
+        self.ai_assistant_action.setChecked(True)
+        self.prototype_interface.commandbar_card.commandbar.addAction(self.ai_assistant_action)
+        
+        self.new_document_action.triggered.connect(lambda: print("New document"))
+        self.ai_assistant_action.triggered.connect(lambda: self.ai_assistant_action.setChecked(True))
 
     def connections(self):
         self.scan_stop_btn_pr.clicked.connect(self._prototype)
@@ -900,10 +944,10 @@ class Window(FluentWindow):
             text = "Save Location"
 
         self.save_location_btn.setText(text)
-        
+
         if self.cfg.save_location != directory:
             self.cfg.save_location.value = directory
-            
+
         self.cfg.save()
 
     @pyqtSlot(str)
@@ -1064,6 +1108,7 @@ class Window(FluentWindow):
         list_item.setSizeHint(queue_item.sizeHint())
         self.prototype_interface.left_w.addItem(list_item)
         self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
+        self.prototype_interface.check_left_widget_width()
 
     def set_queue_item_icon(self, id, icon, loop: bool = False):
         queue_item = self.get_queue_item(id)
@@ -1080,7 +1125,7 @@ class Window(FluentWindow):
         for list_item in list_items:
             list_item: QListWidgetItem = list_item
             queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(list_item)
-            if queue_item.data == id:
+            if queue_item._id == id:
                 return queue_item
 
     def _get_queue_list_items(self) -> list[QListWidgetItem]:
@@ -1097,7 +1142,7 @@ class Window(FluentWindow):
             item: QListWidgetItem = item
             queue_item: QueueItem = self.prototype_interface.left_w.itemWidget(item)
             queue_item.set_icon(CFIF.ACTIVE)
-    
+
     def _update_queue_list_item_theme(self, dark_theme):
         items = self._get_queue_list_items()
 

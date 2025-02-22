@@ -120,7 +120,7 @@ class AgentWorker(QObject):
 
     def run(self):
         """This method runs in a separate thread and waits for tasks indefinitely."""
-        print("\nAgent 2 Running")
+        print("OrDraft Agent Running")
         while self._running:
             self._mutex.lock()
             while not self._processing_allowed and self._running:

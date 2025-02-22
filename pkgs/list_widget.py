@@ -184,7 +184,7 @@ class QueueItem(QWidget):
             parent (Optional[QWidget]): The parent widget. Defaults to None.
         """
         super().__init__(parent)
-        self.id = id
+        self._id = id
         self._loop = loop
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         
@@ -198,12 +198,12 @@ class QueueItem(QWidget):
         self.change_theme(dark_theme)
 
     @property
-    def data(self):
-        return self.id
+    def id(self):
+        return self._id
 
-    @data.setter
-    def data(self, id):
-        self.id = id
+    @id.setter
+    def id(self, id):
+        self._id = id
 
     def init_ui(self, icon: Optional[CFIF]):
         """
@@ -267,12 +267,6 @@ class AutoResizeLabel(QLabel):
     def setText(self, text):
         super().setText(text)
         self.adjustSize()
-
-
-
-class CustomListItem(QWidget):
-    def __init__(self, status, name, parent=None, id=None):
-        super().__init__(parent)
 
 
 

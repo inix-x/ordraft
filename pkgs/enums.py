@@ -1,38 +1,46 @@
-from enum import Enum
+from enum import Enum, auto
 
 class Models(Enum):
     deepseek_r1_distill_llama_8b = "deepseek-r1-distill-llama-8b"
     # deepseek_r1_distill_qwen_1_5b = "lmstudio-community/deepseek-r1-distill-qwen-1.5b"
 
+class DocumentStatus(Enum):
+    NEW            = auto()
+    WAITING        = auto()
+    SCANNING       = auto()
+    DATA_READY     = auto()
+    DOCUMENT_READY = auto()
+
+
 class TemplateType(Enum):
-    DISMISSAL_AIR = "Dismissal - AIR"
-    DISMISSAL_HW = "Dismissal - HW"
-    DISMISSAL_PD = "Dismissal - PD"
+    DISMISSAL_AIR   = "Dismissal - AIR"
+    DISMISSAL_HW    = "Dismissal - HW"
+    DISMISSAL_PD    = "Dismissal - PD"
     DISMISSAL_WATER = "Dismissal - Water"
-    RESO_AIR = "Resolution - AIR" 
-    RESO_HW = "Resolution - HW"
-    RESO_PD = "Resolution - PD"
-    RESO_WATER = "Resolution - Water"
-    PENALTY_WATER = "Penalty - Water"
-    PENALTY_AIR = "Penalty - AIR"
-    PENALTY_PD = "Penalty - PD"
-    PENALTY_HW = "Penalty - HW"
+    RESO_AIR        = "Resolution - AIR" 
+    RESO_HW         = "Resolution - HW"
+    RESO_PD         = "Resolution - PD"
+    RESO_WATER      = "Resolution - Water"
+    PENALTY_WATER   = "Penalty - Water"
+    PENALTY_AIR     = "Penalty - AIR"
+    PENALTY_PD      = "Penalty - PD"
+    PENALTY_HW      = "Penalty - HW"
 
 
 class TemplateFile(Enum):
-    DISMISSAL_HW_REPLY = "templates/order_hw_reply.docx"
-    DISMISSAL_HW_NO_REPLY = "templates/order_hw_no_reply.docx"
-    DISMISSAL_PD_REPLY = "templates/order_pd_reply.docx"
-    DISMISSAL_PD_NO_REPLY = "templates/order_pd_no_reply.docx"
-    DISMISSAL_AIR_REPLY = "templates/order_air_reply.docx"
-    DISMISSAL_AIR_NO_REPLY = "templates/order_air_no_reply.docx"
-    DISMISSAL_WATER_REPLY = "templates/order_water_reply.docx"
+    DISMISSAL_HW_REPLY       = "templates/order_hw_reply.docx"
+    DISMISSAL_HW_NO_REPLY    = "templates/order_hw_no_reply.docx"
+    DISMISSAL_PD_REPLY       = "templates/order_pd_reply.docx"
+    DISMISSAL_PD_NO_REPLY    = "templates/order_pd_no_reply.docx"
+    DISMISSAL_AIR_REPLY      = "templates/order_air_reply.docx"
+    DISMISSAL_AIR_NO_REPLY   = "templates/order_air_no_reply.docx"
+    DISMISSAL_WATER_REPLY    = "templates/order_water_reply.docx"
     DISMISSAL_WATER_NO_REPLY = "templates/order_water_no_reply.docx"
 
-    RESO_HW = "templates/reso_hw.docx"
-    RESO_PD = "templates/reso_pd.docx"
-    RESO_AIR = "templates/reso_air.docx"
-    RESO_WATER = "templates/reso_water.docx"
+    RESO_HW     = "templates/reso_hw.docx"
+    RESO_PD     = "templates/reso_pd.docx"
+    RESO_AIR    = "templates/reso_air.docx"
+    RESO_WATER  = "templates/reso_water.docx"
 
     PENALTY_HW = "templates/ORDER_HW_No_HWG.docx"
     PENALTY_PD = "templates/ORDER_PD_NO_ECC.docx"
