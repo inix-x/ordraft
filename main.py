@@ -126,7 +126,8 @@ class SplitContainerWidget(QFrame):
 
         self.left_w: ListWidget = left_w
         self.left_w.setUniformItemSizes(True)
-        self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.left_w.setSortingEnabled(False)
+        self.left_w.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.left_w.setBaseSize(QSize(55, self.left_w.height()))
         self.left_w.setMinimumWidth(55)
         self.left_w.setMaximumWidth(175)
@@ -159,8 +160,6 @@ class SplitContainerWidget(QFrame):
         self.splitter.splitterMoved.connect(self.check_left_widget_width)
 
     def check_left_widget_width(self):
-        print(self.left_w.width())
-        print(self.splitter.sizes())
         if self.left_w.width() <= self.left_w.minimumWidth() + 32: 
             self.leftWidgetAtMinimum.emit(True)
         else:
@@ -185,15 +184,11 @@ class SplitContainerWidget(QFrame):
 
     def showEvent(self, event):
         super().showEvent(event)
-        # new: Use QTimer to ensure the sizes are set after the event loop has processed the layout.
-        QTimer.singleShot(0, self.adjustSplitterSizes)
+        QTimer.singleShot(0, self.adjust_splitter_sizes)
 
-    # new: Method to adjust the splitter sizes after the widget has been shown.
-    def adjustSplitterSizes(self):
-        totalWidth = self.splitter.width()
-        # Set the left widget to 55 and allocate the remaining width to the right widget.
-        self.splitter.setSizes([55, totalWidth - 55])
-
+    def adjust_splitter_sizes(self, left_width: int = 0, right_width: int = 0):
+        totalWidth = self.splitter.width() - left_width
+        self.splitter.setSizes([left_width, totalWidth])
 
 
 class CustomPushSettingCard(PushSettingCard):
@@ -789,7 +784,7 @@ class Window(FluentWindow):
         template_control.setFixedWidth(725)
         template_control.setContentsMargins(0, 20, 0, 0)
 
-        self.file_button_pr = PushButtonData(FIF.ADD_TO, "Add new file")
+        self.file_button_pr = PushButtonData(FIF.ADD_TO, "Add PDF")
         self.file_button_pr.setFixedWidth(275)
 
         self.save_location_btn_pr = PushButtonData(FIF.FOLDER_ADD, "Save location")
@@ -824,18 +819,18 @@ class Window(FluentWindow):
 
         # Connections
         self.file_button_pr.clicked.connect(
-            lambda id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
+            lambda checked, id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
                 id, icon, loop
             )
         )
-        self.save_location_btn_pr.clicked.connect(lambda id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
+        self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
                 id, icon, loop
         ))
         # self.file_button_pr.clicked.connect(partial(self._browse, 0))
         # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
         # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
         # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
-        # self.scan_stop_btn_pr.clicked.connect(self.generate)
+        self.counter = 1
         # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
 
         # File Control layout
@@ -898,7 +893,7 @@ class Window(FluentWindow):
         self.ai_assistant_action.triggered.connect(lambda: self.ai_assistant_action.setChecked(True))
 
     def connections(self):
-        self.scan_stop_btn_pr.clicked.connect(self._prototype)
+        self.scan_stop_btn_pr.clicked.connect(lambda clicked: self.add_item(self.counter, self.counter))
         self.prototype_interface.leftWidgetAtMinimum.connect(
             self._set_queue_list_text_visibility
         )
@@ -1097,6 +1092,11 @@ class Window(FluentWindow):
         self.generate_doc_btn.setEnabled(True)
 
     def add_item(self, text, data = None):
+        queue_item_list = self._get_queue_list_items()
+
+        if len(queue_item_list) == 0:
+            self.prototype_interface.adjust_splitter_sizes(55)
+
         queue_item = QueueItem(
             text=text, 
             icon=CFIF.ACTIVE, 
@@ -1104,11 +1104,16 @@ class Window(FluentWindow):
             id=data,
             dark_theme=self.cfg.darkTheme.value
         )
-        list_item = QListWidgetItem(self.prototype_interface.left_w)
-        list_item.setSizeHint(queue_item.sizeHint())
-        self.prototype_interface.left_w.addItem(list_item)
-        self.prototype_interface.left_w.setItemWidget(list_item, queue_item)
+
+        list_item = QListWidgetItem()  
+        list_item.setSizeHint(queue_item.sizeHint())  
+        self.prototype_interface.left_w.insertItem(0, list_item)  
+        self.prototype_interface.left_w.setItemWidget(list_item, queue_item)  
+        self.prototype_interface.left_w.viewport().update()  
+
         self.prototype_interface.check_left_widget_width()
+
+        self.counter += 1
 
     def set_queue_item_icon(self, id, icon, loop: bool = False):
         queue_item = self.get_queue_item(id)
