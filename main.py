@@ -825,20 +825,20 @@ class Window(FluentWindow):
         )
 
         # Connections
-        self.file_button_pr.clicked.connect(
-            lambda checked, id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
-                id, icon, loop
-            )
-        )
-        self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
-                id, icon, loop
-        ))
-        # self.file_button_pr.clicked.connect(partial(self._browse, 0))
-        # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
-        # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
-        # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
-        self.counter = 1
-        # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
+        # self.file_button_pr.clicked.connect(
+        #     lambda checked, id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
+        #         id, icon, loop
+        #     )
+        # )
+        # self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
+        #         id, icon, loop
+        # ))
+        # # self.file_button_pr.clicked.connect(partial(self._browse, 0))
+        # # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
+        # # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
+        # # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
+        # self.counter = 1
+        # # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
 
         # File Control layout
         controls._layout.addWidget(
@@ -899,7 +899,7 @@ class Window(FluentWindow):
         self.ai_assistant_action.triggered.connect(lambda: self.ai_assistant_action.setChecked(True))
 
     def connections(self):
-        self.scan_stop_btn_pr.clicked.connect(lambda clicked: self.add_item(self.counter, self.counter))
+        # Interface Connections
         self.prototype_interface.leftWidgetAtMinimum.connect(
             self._set_queue_list_text_visibility
         )
