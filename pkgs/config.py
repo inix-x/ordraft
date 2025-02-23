@@ -26,7 +26,7 @@ class DismissalGuidelines:
          - If only one date is present, do not assign it to both date fields.
          - If both dates are the same, then check the guidelines again for date of notice of violation.
       - **date formatting:**
-         - always format the date as dd/month/yyy
+         - always format the date as dd month yyyy or 01 January 2025
 
    2. **Pattern Matching Node:**
       - Extract the `case_number` ensuring it starts with the prefix `"NOV-EMB-NCR"`.
@@ -38,7 +38,7 @@ class DismissalGuidelines:
 
    4. **Section Parsing Node:**
       - Locate the section under the header **"ACTS CONSTITUTING THE VIOLATION"**.
-      - **Strictly ilter**: Extract any text related related and/or contains the following: <TEMPLATE_TYPE>.
+      - **Strictly filter**: Extract text related and/or contains the following: <TEMPLATE_TYPE>.
 
    5. **Fallback and Error Handling Node:**
       - If any field (e.g., `date_of_inspection` or `date_of_notice_of_violation`) is not detected in the PDF text, use the corresponding field name as its value.
@@ -54,13 +54,13 @@ class DismissalGuidelines:
       
       findings = None
       if self.document_type == TemplateType.DISMISSAL_AIR:
-         findings = "findings related to air, findings with violations related to air."
+         findings = "findings related to air"
       if self.document_type == TemplateType.DISMISSAL_HW:
-         findings = "findings related to HW (hazard/hazardous wastes), findings with violations related to HW (hazard/hazardous wastes)."
+         findings = "findings related to HW (hazard/hazardous wastes)"
       if self.document_type == TemplateType.DISMISSAL_WATER:
-         findings = "findings related to water, findings with violations related to water."
+         findings = "findings related to water"
       if self.document_type == TemplateType.DISMISSAL_PD:
-         findings = "findings related to (PD) Presidential Decree, findings with violations related to (PD) Presidential Decree."
+         findings = "findings related to PD orADVANCE MARKETING Presidential Decree"
 
 
       final_prompt = self._base_template.replace("<TEMPLATE_TYPE>", findings)
@@ -78,7 +78,7 @@ RESO_DEFAULT_GUIDELINES = '''
 5. `date_of_motion_for_recon`: this can be found on paragraph containing 'Respondent submitted its Position Paper'.
 6. 'date_of_order' is found after the wherefore or before the signing section of regional director.
 7 **date formatting:**
-   - always format the date as dd month yyyy
+   - always format the date as dd month yyyy or 01 January 2025
 '''
 DEFAULT_INSTRUCTIONS = '''**INSTRUCTIONS**  
 1. Carefully read the entire PDF_TEXT.  
