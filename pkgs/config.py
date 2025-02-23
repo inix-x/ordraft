@@ -38,7 +38,16 @@ class DismissalGuidelines:
 
    4. **Section Parsing Node:**
       - Locate the section under the header **"ACTS CONSTITUTING THE VIOLATION"**.
-      - **Strictly filter**: Extract copy text related and/or contains the following: <TEMPLATE_TYPE>.
+      - **Strictly filter**: Extract copy text related and/or contains the following: findings related to air, use but do not include violations related to air to when looking for findings.
+
+   4. **Section Parsing Node:**
+      - In Acts Constituting the Violation there is a table below:
+         - Task: Locate findings under the header "ACTS CONSTITUTING THE VIOLATION".
+         - Filtering:
+            - Strictly include and copy only the textual findings related to <TEMPLATE_TYPE> issues.
+            - Exclude: Any text that only references violations without discussing findings.
+      - Clarification:
+         - If multiple findings are present, ensure that only those that strictly meet the <TEMPLATE_TYPE> context are returned.
 
    5. **Fallback and Error Handling Node:**
       - If any field (e.g., `date_of_inspection` or `date_of_notice_of_violation`) is not detected in the PDF text, use the corresponding field name as its value.
@@ -54,13 +63,13 @@ class DismissalGuidelines:
       
       findings = None
       if self.document_type == TemplateType.DISMISSAL_AIR:
-         findings = "findings related to air, use but do not include violations related to air to when looking for findings."
+         findings = "air quality"
       if self.document_type == TemplateType.DISMISSAL_HW:
-         findings = "findings related to HW (hazard/hazardous wastes), use but do not include violations related to HW (hazard/hazardous wastes) to when looking for findings."
+         findings = "HW or hazard or hazardous wastes"
       if self.document_type == TemplateType.DISMISSAL_WATER:
-         findings = "findings related to water, use but do not include violations related to water to when looking for findings."
+         findings = "water quality"
       if self.document_type == TemplateType.DISMISSAL_PD:
-         findings = "findings related to PD or Presidential Decree, use but do not include violations related to PD/Presidential Decree to when looking for findings."
+         findings = "PD or Presidential Decree"
 
 
       final_prompt = self._base_template.replace("<TEMPLATE_TYPE>", findings)
