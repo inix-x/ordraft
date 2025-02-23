@@ -269,9 +269,10 @@ class HuggingFaceAPI(QObject):
 class CloudLLM(QObject):
     stream_finished = pyqtSignal(bool, str)
     status_changed = pyqtSignal(Document)
-    text_chunk = pyqtSignal(str)
+    text_chunk = pyqtSignal(bool, str)
     error_occured = pyqtSignal(object)
 
+    stream_start = pyqtSignal(bool)
     stream_stopped = pyqtSignal(bool)
 
     def __init__(self):
@@ -386,12 +387,13 @@ class CloudLLM(QObject):
             self.error_occured.emit(error_msg)
             return
 
-        buffer = ""
-        current_think_text = ""  
+        buffer: str = ""
+        current_think_text: str = ""  
         
         self._stop_requested = False
         
         try:
+            self.stream_start.emit(True)
             chat_completion = self._llm_client.chat.completions.create(
                 model="deepseek/deepseek-r1-distill-llama-70b",
                 messages=[user_prompt, system_prompt],
@@ -427,15 +429,17 @@ class CloudLLM(QObject):
                         if new_text.startswith(current_think_text):
                             delta = new_text[len(current_think_text):]
                             if delta:
-                                self.text_chunk.emit(delta)
+                                self.text_chunk.emit(True, delta)
                                 current_think_text += delta
                         else:
-                            self.text_chunk.emit(new_text)
+                            self.text_chunk.emit(True, new_text)
                             current_think_text = new_text
 
                         if end_idx != -1:
                             buffer = buffer[end_idx + len("</think>"):]
                             current_think_text = ""
+                            self.text_chunk.emit(False, "")
+
         except Exception as e:
             self.error_occured.emit(f"\n[Error] {str(e)}")
         finally:
