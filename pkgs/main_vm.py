@@ -61,9 +61,13 @@ class MainViewModel(QObject):
 
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
+        self._cloud_llm.stream_start.connect(self._start_streaming)
         self._cloud_llm.stream_stopped.connect(self._stream_stopped_success)
         
         self._llm_state: StateLLM = None
+
+        self._thinking = False
+        self._stream_stopped = False
         
     @property
     def documents(self) -> DocumentsCollection:
@@ -72,9 +76,19 @@ class MainViewModel(QObject):
     @property
     def doc_ui_map(self):
         return self._doc_map
+    
+    def new_document(self) -> Document:
+        document = Document(
+            temp_doc_data=None,
+            doc_payload=None
+        )
+        return document
+        
+    def get_unused_document(self) -> Document:
+       for document in self.documents:
+           print(document)
 
     def main_handler(self, data: GenerateDocData) -> tuple[bool, object]:
-        template_filepath = None
         doc_payload = None
         try:
             data.validate()
@@ -142,7 +156,7 @@ class MainViewModel(QObject):
                 status="Generating",
                 name=doc.file_name,
             )
-            self.docEvents.emit(doc_status, doc.id)
+            self.docEvents.emit(doc)
 
             result: Document = self.word_processor.draft_dismissal(doc)
             if isinstance(result.doc_payload.error_occured, Exception):
@@ -155,7 +169,7 @@ class MainViewModel(QObject):
                 name=document.file_name,
             )
 
-            self.docEvents.emit(doc_status, document.id)
+            self.docEvents.emit(doc)
         except Exception as e:
             doc_status = UpdateDocData(
                 id=doc.id,
@@ -163,17 +177,23 @@ class MainViewModel(QObject):
                 name=doc.file_name,
                 error=e
             )
-            self.docEvents.emit(doc_status, doc.id)
+            self.docEvents.emit(doc)
         finally:
             self._cloud_llm_worker.allow_next_task()
             # self._api_worker.allow_next_task()
             pass
     
-    @pyqtSlot(str)
-    def _update_chat_box(self, text_chunk):
-        if text_chunk not in ["<think>", "</think>"]:
+    @pyqtSlot(bool, str)
+    def _update_chat_box(self, thoughts: bool, text_chunk: str):
+        if thoughts is True:
             self.chatbox_update.emit(text_chunk)
-    
+        else:
+            self._thinking = False
+
+        if self._thinking is False and self._stream_stopped is False:
+            self.chatbox_update.emit("\nPlease wait as I prepare the data extracted.")
+            self._thinking = True
+
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
         self.errorOccured.emit(err)
@@ -189,8 +209,15 @@ class MainViewModel(QObject):
         self.llm_stream_finished.emit(state)
     
     @pyqtSlot(bool)
+    def _start_streaming(self, state):
+        if state is True:
+            self._thinking = True
+            self._stream_stopped = False
+
+    @pyqtSlot(bool)
     def _stream_stopped_success(self, state):
         self.stream_stopped_sucess.emit(state)
+        self._stream_stopped = True
     
     @pyqtSlot(Document)
     def _handle_status_changed(self, doc: Document):
@@ -211,12 +238,12 @@ class MainViewModel(QObject):
             if doc.doc_payload.error_occured is not None:
                 doc_status.status = "Error"
                 doc_status.error = doc.doc_payload.error_occured
-                self.docEvents.emit(doc_status, doc.id)
+                self.docEvents.emit(doc)
 
             if doc.doc_payload.status == "Processed":
                 self._handle_document_generation(doc)
             else:
-                self.docEvents.emit(doc_status, doc.id)
+                self.docEvents.emit(doc)
 
         except Exception as e:
             print(f"{e}: {traceback.format_exc()}")

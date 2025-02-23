@@ -60,13 +60,13 @@ class DocPayload:
         
 @dataclass
 class Document:
-    temp_doc_data: GenerateDocData
-    doc_payload: DocPayload
+    temp_doc_data: GenerateDocData | None
+    doc_payload: DocPayload | None
     _uuid: str = field(init=False, repr=False)  
     file_name: str = field(default=None)
     _save_filepath: str = field(init=False, repr=False)
     status: DocumentStatus = field(default=DocumentStatus.NEW)
-
+    error: Exception = field(default=None)
     def __post_init__(self):
         self.save_filepath = ""
         self._uuid = str(uuid.uuid4())

@@ -45,6 +45,7 @@ from pkgs import (
     QueueItem, CommandBarCard
 )
 
+from pkgs import Document
 # fmt: on
 
 
@@ -411,6 +412,12 @@ class Window(FluentWindow):
     def __init__(self):
         super().__init__()
         self.cfg = Config()
+
+        self.navigationInterface.panel.setMenuButtonVisible(True)
+        self.navigationInterface.panel.menuButton.setEnabled(False)
+        self.navigationInterface.panel.menuButton.setIcon(None)
+        self.navigationInterface.panel.setReturnButtonVisible(False)
+        self.navigationInterface.panel.setCollapsible(True)
 
         # Interface
         self.dismissal_interface = Widget(text="Draft", parent=self)
@@ -818,20 +825,20 @@ class Window(FluentWindow):
         )
 
         # Connections
-        self.file_button_pr.clicked.connect(
-            lambda checked, id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
-                id, icon, loop
-            )
-        )
-        self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
-                id, icon, loop
-        ))
-        # self.file_button_pr.clicked.connect(partial(self._browse, 0))
-        # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
-        # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
-        # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
-        self.counter = 1
-        # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
+        # self.file_button_pr.clicked.connect(
+        #     lambda checked, id=1, icon=CFIF.ACTIVE, loop=True: self.set_queue_item_icon(
+        #         id, icon, loop
+        #     )
+        # )
+        # self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
+        #         id, icon, loop
+        # ))
+        # # self.file_button_pr.clicked.connect(partial(self._browse, 0))
+        # # self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
+        # # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
+        # # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
+        # self.counter = 1
+        # # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
 
         # File Control layout
         controls._layout.addWidget(
@@ -878,7 +885,6 @@ class Window(FluentWindow):
             FIF.ADD,
             "New Document",
             shortcut=QKeySequence("ctrl+n"),
-            triggered=lambda: print("here"),
         )
         # self.new_document_action.setEnabled(False)
         self.prototype_interface.commandbar_card.commandbar.addAction(self.new_document_action)
@@ -889,14 +895,35 @@ class Window(FluentWindow):
         self.ai_assistant_action.setChecked(True)
         self.prototype_interface.commandbar_card.commandbar.addAction(self.ai_assistant_action)
         
-        self.new_document_action.triggered.connect(lambda: print("New document"))
+        # self.new_document_action.triggered.connect(lambda: print("New document"))
         self.ai_assistant_action.triggered.connect(lambda: self.ai_assistant_action.setChecked(True))
 
     def connections(self):
-        self.scan_stop_btn_pr.clicked.connect(lambda clicked: self.add_item(self.counter, self.counter))
+        # Interface Connections
         self.prototype_interface.leftWidgetAtMinimum.connect(
             self._set_queue_list_text_visibility
         )
+        
+        # Prototype Interface: Connections
+        self.file_button_pr.clicked.connect(partial(self._browse, 0))
+        self.scan_stop_btn_pr.clicked.connect(self.generate)
+        self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
+        self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
+        self.template_combobox_pr.currentTextChanged.connect(
+            self._update_template_combobox
+        )
+
+        # Prototype Interface: Command Bar Connections
+        self.new_document_action.triggered.connect(self.handle_new_document)
+
+        # self.save_location_btn_pr.clicked.connect(lambda checked, id=1, icon=CFIF.STOPPED, loop=False: self.set_queue_item_icon(
+        #         id, icon, loop
+        # ))
+        # self.file_button_pr.clicked.connect(partial(self._browse, 0))
+        self.save_location_btn_pr.clicked.connect(partial(self._browse, 1))
+        # self.open_save_location_btn_pr.clicked.connect(self._open_save_location)
+        # self.template_combobox_pr.currentTextChanged.connect(self._update_template_combobox)
+        # self.generate_doc_btn_pr.clicked.connect(self.view_model._handle_document_generation)
 
     def _browse(self, type: int):
         try:
@@ -910,14 +937,14 @@ class Window(FluentWindow):
 
                 filename = os.path.splitext(os.path.basename(file_path))[0]
                 if not len(filename) == 0:
-                    self.file_button.data = file_path
+                    self.file_button_pr.data = file_path
                     text = self.view_model._truncate_string(filename, 30)
-                    self.file_button.setText(text)
+                    self.file_button_pr.setText(text)
                     if self.view_model.is_new_session(file_path) is True:
                         self.view_model._document = None
                         self.generate_doc_btn.setEnabled(False)
                 else:
-                    self.file_button.setText("Add file")
+                    self.file_button_pr.setText("Add PDF")
 
             else:
                 directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -931,14 +958,14 @@ class Window(FluentWindow):
         if not os.path.exists(directory) and len(directory) == 0:
             raise IOError("Directory not found")
 
-        self.save_location_btn.data = directory
+        self.save_location_btn_pr.data = directory
         _directory = os.path.basename(directory)
         text = self.view_model._truncate_string(_directory, 14)
 
         if len(text) == 0:
             text = "Save Location"
 
-        self.save_location_btn.setText(text)
+        self.save_location_btn_pr.setText(text)
 
         if self.cfg.save_location != directory:
             self.cfg.save_location.value = directory
@@ -958,14 +985,14 @@ class Window(FluentWindow):
             TemplateType.PENALTY_PD,
             TemplateType.PENALTY_HW,
         ]:
-            self.include_reply.setChecked(False)
-            self.include_reply.setEnabled(False)
+            self.include_reply_pr.setChecked(False)
+            self.include_reply_pr.setEnabled(False)
         else:
-            self.include_reply.setEnabled(True)
+            self.include_reply_pr.setEnabled(True)
 
     def _open_save_location(self):
         try:
-            absolute_path = os.path.relpath(self.save_location_btn.data)
+            absolute_path = os.path.relpath(self.save_location_btn_pr.data)
 
             if absolute_path is None:
                 raise ValueError("Add Save Location first")
@@ -985,8 +1012,8 @@ class Window(FluentWindow):
                     raise RuntimeError(f"Failed to open the folder: {absolute_path}")
 
         except Exception as e:
-            self.show_message_box("Error", str(e))
-            # print(traceback.format_exc())
+            self.show_message_box("Error", "Add Save Location first")
+            print(traceback.format_exc())
 
     def show_message_box(self, title, content):
         self.message_box.set_title(title)
@@ -1015,35 +1042,35 @@ class Window(FluentWindow):
             QDesktopServices.openUrl(url)
 
     def generate(self):
-        if self.scan_stop_btn.data == "scanning":
+        if self.scan_stop_btn_pr.data == "scanning":
             self.view_model.handle_stream_stop(True)
-            self.scan_stop_btn.setEnabled(False)
+            self.scan_stop_btn_pr.setEnabled(False)
             return
 
         self.generate_doc_btn.setEnabled(False)
-        self.stream_card.chatbox.setPlainText("")
+        self.stream_view.chatbox.setPlainText("")
         try:
             data = GenerateDocData(
                 url=self.api_url.data,
-                pdf_path=self.file_button.data,
-                save_path=self.save_location_btn.data,
-                is_reply_included=self.include_reply.isChecked(),
-                selected_template=TemplateType(self.template_combobox.currentText()),
+                pdf_path=self.file_button_pr.data,
+                save_path=self.save_location_btn_pr.data,
+                is_reply_included=self.include_reply_pr.isChecked(),
+                selected_template=TemplateType(self.template_combobox_pr.currentText()),
                 is_custom_prompt=False,
                 custom_prompt="",
             )
             success, e = self.view_model.main_handler(data)
 
             if success is True:
-                self.stream_card.chatbox.setPlainText("Preparing... ")
-                self.scan_stop_btn.data = "scanning"
-                self.scan_stop_btn.setText("Stop")
+                self.stream_view.chatbox.setPlainText("Preparing...\n")
+                self.scan_stop_btn_pr.data = "scanning"
+                self.scan_stop_btn_pr.setText("Stop")
 
         except Exception as e:
             print(traceback.format_exc())
             self.show_message_box("Error", f"{e}")
 
-    def generate_events(self, doc: UpdateDocData, id: str):
+    def generate_events(self, doc: Document):
         if doc.status == "Done":
             self.generate_doc_btn.setEnabled(True)
             pass
@@ -1053,17 +1080,17 @@ class Window(FluentWindow):
             self.show_message_box("Error", str(doc.error))
 
     def update_chatbox(self, text: str):
-        self.stream_card.chatbox.moveCursor(
-            self.stream_card.chatbox.textCursor().MoveOperation.End
+        self.stream_view.chatbox.moveCursor(
+            self.stream_view.chatbox.textCursor().MoveOperation.End
         )
-        self.stream_card.chatbox.insertPlainText(text)
+        self.stream_view.chatbox.insertPlainText(text)
 
     @pyqtSlot(bool)
     def _finished(self, state):
         if state is True:
-            self.scan_stop_btn.setText("Scan PDF")
-            self.scan_stop_btn.data = "not-scanning"
-            self.generate_doc_btn.setEnabled(True)
+            self.scan_stop_btn_pr.setText("Scan PDF")
+            self.scan_stop_btn_pr.data = "not-scanning"
+            self.generate_doc_btn_pr.setEnabled(True)
 
     @pyqtSlot(bool)
     def _stream_stopped_success(self, state):
@@ -1071,25 +1098,25 @@ class Window(FluentWindow):
             self.show_message_box("Error", "RESTART THE APP")
             return
 
-        self.scan_stop_btn.data = "not-scanning"
-        self.scan_stop_btn.setText("Scan PDF")
-        self.scan_stop_btn.setEnabled(True)
+        self.scan_stop_btn_pr.data = "not-scanning"
+        self.scan_stop_btn_pr.setText("Scan PDF")
+        self.scan_stop_btn_pr.setEnabled(True)
 
     @pyqtSlot(str)
     def _handle_error(self, err):
         self.show_message_box("Error", err)
-        self.stream_card.chatbox.setPlainText("")
-        self.scan_stop_btn.setText("Scan PDF")
+        self.stream_view.chatbox.setPlainText("")
+        self.scan_stop_btn_pr.setText("Scan PDF")
 
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
-        self.stream_card.chatbox.moveCursor(
-            self.stream_card.chatbox.textCursor().MoveOperation.End
+        self.stream_view.chatbox.moveCursor(
+            self.stream_view.chatbox.textCursor().MoveOperation.End
         )
-        self.stream_card.chatbox.insertPlainText(
+        self.stream_view.chatbox.insertPlainText(
             "\nOppsss...Something went wrong on my end."
         )
-        self.generate_doc_btn.setEnabled(True)
+        self.generate_doc_btn_pr.setEnabled(True)
 
     def add_item(self, text, data = None):
         queue_item_list = self._get_queue_list_items()
@@ -1167,6 +1194,17 @@ class Window(FluentWindow):
                 queue_item.hide_text()
             else:
                 queue_item.show_text()
+
+    def handle_new_document(self):
+        self.view_model.get_unused_document()
+        document = self.view_model.new_document()
+        
+        self.stream_view.chatbox.setPlainText("")
+        self.file_button_pr.setText("Add PDF")
+        self.file_button_pr.data = None
+        self.template_combobox_pr.setCurrentIndex(-1)
+        self.include_reply_pr.setChecked(False)
+
 
     def _prototype(self):
         try:
