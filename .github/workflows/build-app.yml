@@ -1,6 +1,9 @@
 # new
 name: Build and Package App for macOS and Windows
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ master ]
