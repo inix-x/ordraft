@@ -3,9 +3,9 @@ name: Build PyQt6 App on macOS and Windows
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build-macos:
@@ -30,7 +30,7 @@ jobs:
           pyinstaller OrDraft.spec
 
       - name: Archive Built macOS App
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-app
           path: dist/
@@ -57,7 +57,7 @@ jobs:
           pyinstaller OrDraft.spec
 
       - name: Archive Built Windows App
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-app
           path: dist/
