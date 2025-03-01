@@ -93,13 +93,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download macOS Installer Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: macos-installer
           path: macos_installer
 
       - name: Download Windows Installer Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: windows-installer
           path: windows_installer
