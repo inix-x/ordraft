@@ -1,0 +1,63 @@
+# new
+name: Build PyQt6 App on macOS and Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Environment (macOS)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.5'
+
+      - name: Install Dependencies (macOS)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Application with PyInstaller (macOS)
+        run: |
+          # Build using the PyInstaller spec file
+          pyinstaller OrDraft.spec
+
+      - name: Archive Built macOS App
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: dist/
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Environment (Windows)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.5'
+
+      - name: Install Dependencies (Windows)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Application with PyInstaller (Windows)
+        run: |
+          # Build using the PyInstaller spec file
+          pyinstaller OrDraft.spec
+
+      - name: Archive Built Windows App
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-app
+          path: dist/
