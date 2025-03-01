@@ -1,3 +1,4 @@
+# new
 name: Build and Package App for macOS and Windows
 
 on:
@@ -33,7 +34,7 @@ jobs:
       - name: Check Disk Space (macOS)
         run: df -h
 
-      - name: Check .app Size (macOS)
+      - name: Check .app Size (macos)
         run: du -sh dist/OrDraft.app
 
       - name: Clean up Build Artifacts (macOS)
@@ -41,15 +42,17 @@ jobs:
           rm -rf build
           rm -rf ~/Library/Caches/PyInstaller || true
 
-      - name: Create DMG Installer
+      # new: Zip the .app bundle for distribution
+      - name: Zip .app Bundle
         run: |
-          hdiutil create -volname OrDraft -srcfolder dist/OrDraft.app -ov -format UDZO OrDraft.dmg
+          cd dist
+          zip -r OrDraft.app.zip OrDraft.app
 
       - name: Upload macOS Installer Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
-          path: OrDraft.dmg
+          path: dist/OrDraft.app.zip
 
   build-windows:
     runs-on: windows-latest
@@ -118,9 +121,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: macos_installer/MyApp.dmg
-          asset_name: MyApp.dmg
-          asset_content_type: application/x-apple-diskimage
+          asset_path: macos_installer/OrDraft.app.zip
+          asset_name: OrDraft.app.zip
+          asset_content_type: application/zip
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1
