@@ -31,6 +31,9 @@ jobs:
       - name: List Dist Folder Contents (macOS)
         run: ls -l dist
 
+      - name: Clean up Build Artifacts (macOS)
+        run: rm -rf build
+
       - name: Create DMG Installer
         run: |
           # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/OrDraft.app
@@ -71,6 +74,9 @@ jobs:
         run: |
           # Ensure that installer.nsi is properly configured to package your build
           makensis windows_installer.nsi
+
+      - name: Clean up Build Artifacts (Windows)
+        run: rmdir /s /q build
 
       - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
