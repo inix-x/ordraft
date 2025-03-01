@@ -1,0 +1,10 @@
+{
+    "MainWindow": {
+        "darkTheme": true,
+        "TransparentSubInterface": false
+    },
+    "QFluentWidgets": {
+        "ThemeColor": "#ff3cb969",
+        "ThemeMode": "Dark"
+    }
+}
