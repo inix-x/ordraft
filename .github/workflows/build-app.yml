@@ -26,7 +26,7 @@ jobs:
 
       - name: Build Application with PyInstaller (macOS)
         run: |
-          pyinstaller OrDraft-MacOS.spec
+          pyinstaller --onefile --windowed main.py --clean --noconfirm --add-data "resource:resource" --add-data "resource/icons:resource/icons" --add-data "templates:templates" --add-data "config.json:." --hidden-import pkgs --name OrDraft --icon resource/icon.ico
 
       - name: List Dist Folder Contents (macOS)
         run: ls -l dist
