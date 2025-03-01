@@ -15,7 +15,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
     QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
-    QWidget, QListWidgetItem
+    QWidget
 )
 from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices
 
@@ -24,7 +24,7 @@ from qfluentwidgets import (
     SwitchSettingCard, qconfig, StyleSheetBase, Theme, setTheme,
     setThemeColor, PushButton,CaptionLabel, CardWidget,
     isDarkTheme, IconWidget, BodyLabel, TransparentToolButton, 
-    PlainTextEdit, ComboBox, ListWidget, ListItemDelegate,
+    PlainTextEdit, ComboBox, ListWidget,
     CheckBox, MessageBoxBase, LineEdit,
     PushSettingCard,
 )
@@ -38,12 +38,10 @@ from pkgs.icons import MyFluentIcon as CFIF
 
 
 from pkgs import (
-    URL, TemplateType, MainViewModel, CustomListItem,
-    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout,
-    QueueItem
+    URL, TemplateType, MainViewModel,
+    GenerateDocData, Data, UpdateDocData, InfoBars, create_layout
 )
 
-from pkgs import StateLLM
 # fmt: on
 
 
