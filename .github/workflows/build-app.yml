@@ -1,4 +1,3 @@
-# new
 name: Build and Package App for macOS and Windows
 
 on:
@@ -31,13 +30,19 @@ jobs:
       - name: List Dist Folder Contents (macOS)
         run: ls -l dist
 
+      - name: Check Disk Space (macOS)
+        run: df -h
+
+      - name: Check .app Size (macOS)
+        run: du -sh dist/OrDraft.app
+
       - name: Clean up Build Artifacts (macOS)
-        run: rm -rf build
+        run: |
+          rm -rf build
+          rm -rf ~/Library/Caches/PyInstaller || true
 
       - name: Create DMG Installer
         run: |
-          # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/OrDraft.app
-          # Create a DMG installer named "OrDraft.dmg"
           hdiutil create -volname OrDraft -srcfolder dist/OrDraft.app -ov -format UDZO OrDraft.dmg
 
       - name: Upload macOS Installer Artifact
@@ -72,7 +77,6 @@ jobs:
 
       - name: Create NSIS Installer
         run: |
-          # Ensure that installer.nsi is properly configured to package your build
           makensis windows_installer.nsi
 
       - name: Clean up Build Artifacts (Windows)
