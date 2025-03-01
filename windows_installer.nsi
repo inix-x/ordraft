@@ -16,7 +16,6 @@ Var CREATE_SHORTCUT           ; new: Stores user choice for shortcut creation
 
 # new: MUI pages (welcome, license, directory, custom options, install, finish)
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "license.txt"   ; new: Ensure license.txt is available
 !insertmacro MUI_PAGE_DIRECTORY
 Page custom ShortcutPageCreate ShortcutPageLeave   ; new: Custom page for extra actions
 !insertmacro MUI_PAGE_INSTFILES

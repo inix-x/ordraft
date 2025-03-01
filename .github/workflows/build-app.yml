@@ -32,13 +32,13 @@ jobs:
         run: |
           # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/MyApp.app
           # Create a DMG installer named "MyApp.dmg"
-          hdiutil create -volname MyApp -srcfolder dist/MyApp.app -ov -format UDZO MyApp.dmg
+          hdiutil create -volname OrDraft -srcfolder dist/OrDraft.app -ov -format UDZO OrDraft.dmg
 
       - name: Upload macOS Installer Artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-installer
-          path: MyApp.dmg
+          path: OrDraft.dmg
 
   build-windows:
     runs-on: windows-latest
