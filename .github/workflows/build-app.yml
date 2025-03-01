@@ -28,10 +28,13 @@ jobs:
         run: |
           pyinstaller OrDraft.spec
 
+      - name: List Dist Folder Contents (macOS)
+        run: ls -l dist
+
       - name: Create DMG Installer
         run: |
-          # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/MyApp.app
-          # Create a DMG installer named "MyApp.dmg"
+          # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/OrDraft.app
+          # Create a DMG installer named "OrDraft.dmg"
           hdiutil create -volname OrDraft -srcfolder dist/OrDraft.app -ov -format UDZO OrDraft.dmg
 
       - name: Upload macOS Installer Artifact

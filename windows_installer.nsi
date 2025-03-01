@@ -31,11 +31,7 @@ Section "Install" SEC01
     CreateDirectory "$INSTDIR\OrDraft-OF"
 
     ; new: Embed the main executable into the installer
-    File "OrDraft-OF\OrDraft.exe"
-    
-    ; new: Embed all files in the Templates folder
-    CreateDirectory "$INSTDIR\OrDraft-OF\Templates"
-    File /r "OrDraft-OF\Templates\*.*"
+    File "dist\OrDraft.exe"
 SectionEnd
 
 # new: Custom page for additional post-install actions
