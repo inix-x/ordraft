@@ -395,7 +395,7 @@ class CloudLLM(QObject):
             chat_completion = self._llm_client.chat.completions.create(
                 model="deepseek/deepseek-r1-distill-llama-70b",
                 messages=[user_prompt, system_prompt],
-                temperature=0.75,
+                temperature=0.77,
                 max_tokens=8192,
                 stream=True,
             )

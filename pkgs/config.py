@@ -37,15 +37,14 @@ class DismissalGuidelines:
       - Extract `client_name` as the text immediately preceding the location, which may include a personal or company name.
 
    4. **Section Parsing Node:**
-      - Locate the section under the header **"ACTS CONSTITUTING THE VIOLATION"**.
-      - **Strictly filter**: Extract copy text related and/or contains the following: findings related to air, use but do not include violations related to air to when looking for findings.
-
-   4. **Section Parsing Node:**
       - In Acts Constituting the Violation there is a table below:
          - Task: Locate findings under the header "ACTS CONSTITUTING THE VIOLATION".
          - Filtering:
-            - Strictly include and copy only the textual findings related to <TEMPLATE_TYPE> issues.
-            - Exclude: Any text that only references violations without discussing findings.
+            - STRICTLY COPY ONLY THE TEXTUAL FINDINGS OF <TEMPLATE_TYPE> ISSUES.
+            - **exclude**: 
+               - text that is closely but not specifically of <TEMPLATE_TYPE> 
+               - Any text that only references violations without discussing findings.
+
       - Clarification:
          - If multiple findings are present, ensure that only those that strictly meet the <TEMPLATE_TYPE> context are returned.
 
