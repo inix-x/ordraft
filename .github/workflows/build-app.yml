@@ -1,5 +1,5 @@
 # new
-name: Build PyQt6 App on macOS and Windows
+name: Build and Package App for macOS and Windows
 
 on:
   push:
@@ -26,14 +26,20 @@ jobs:
 
       - name: Build Application with PyInstaller (macOS)
         run: |
-          # Build using the PyInstaller spec file
-          pyinstaller OrDraft.spec
+          # Replace 'MyApp.spec' with your spec file if different
+          pyinstaller MyApp.spec
 
-      - name: Archive Built macOS App
+      - name: Create DMG Installer
+        run: |
+          # Assuming PyInstaller output is a .app bundle in the "dist" folder, for example dist/MyApp.app
+          # Create a DMG installer named "MyApp.dmg"
+          hdiutil create -volname MyApp -srcfolder dist/MyApp.app -ov -format UDZO MyApp.dmg
+
+      - name: Upload macOS Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
-          path: dist/
+          name: macos-installer
+          path: MyApp.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -53,11 +59,68 @@ jobs:
 
       - name: Build Application with PyInstaller (Windows)
         run: |
-          # Build using the PyInstaller spec file
-          pyinstaller OrDraft.spec
+          # Replace 'MyApp.spec' with your spec file if different
+          pyinstaller MyApp.spec
 
-      - name: Archive Built Windows App
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+
+      - name: Create NSIS Installer
+        run: |
+          # Ensure that installer.nsi is properly configured to package your build
+          makensis windows_installer.nsi
+
+      - name: Upload Windows Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-app
-          path: dist/
+          name: windows-installer
+          # Adjust the installer file name if your NSIS script outputs a different file name
+          path: MyAppInstaller.exe
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS Installer Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-installer
+          path: macos_installer
+
+      - name: Download Windows Installer Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-installer
+          path: windows_installer
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      - name: Upload macOS Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: macos_installer/MyApp.dmg
+          asset_name: MyApp.dmg
+          asset_content_type: application/x-apple-diskimage
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: windows_installer/MyAppInstaller.exe
+          asset_name: MyAppInstaller.exe
+          asset_content_type: application/vnd.microsoft.portable-executable

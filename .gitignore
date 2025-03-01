@@ -9,6 +9,4 @@ __pycache__/
 *$py.class
 .vscode/launch.json
 .vscode/settings.json
-templates/
-templates/*
 config.json

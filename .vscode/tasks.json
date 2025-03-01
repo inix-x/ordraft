@@ -9,7 +9,7 @@
             "command": "cmd",
             "args": [
                 "/c",
-                "workon ordraft && pyinstaller --onefile main.py --clean --noconfirm --add-data \"resource;resource\" --add-data \"resource/icons;resource/icons\" --hidden-import pkgs --name OrDraft --icon resource/icon.ico"
+                "workon ordraft && pyinstaller --onefile main.py --clean --noconfirm --add-data \"resource;resource\" --add-data \"resource/icons;resource/icons\" --add-data \"templates;templates\" --add-data \"config.json;.\" --hidden-import pkgs --name OrDraft --icon resource/icon.ico"
             ],
             "problemMatcher": [],
             "group": {

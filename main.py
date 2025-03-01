@@ -424,6 +424,10 @@ class Window(FluentWindow):
         self.settings_setup_ui()
         self.dismissal_setup_ui()
         # self.draft_setup_ui()
+
+        if self.view_model._data_model.is_first_time() is True:
+            self._moved_data()
+            
         self._load_config()
         self._components()
 
@@ -434,10 +438,18 @@ class Window(FluentWindow):
 
         # self.connections()
 
+    def _moved_data(self):
+        try:
+            self.view_model._data_model.moved_templates()
+            self.view_model._data_model.moved_config()
+        except Exception as e:
+            self.show_message_box("Critical Error", f"Screenshot and send this to the developer:\n{e}")
+            self.close()
+
     def _load_config(self):
         try:
-            file_path = "config.json"
-            # config_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", file_path)
+            # file_path = os.path.join(self.view_model._data_model.get_path(), "config.json")
+            file_path = os.path.join(self.view_model._data_model.app_data_path, "config.json")
             if not os.path.exists(file_path):
                 with open(file_path, "w") as file:
                     file.write("")
@@ -944,12 +956,13 @@ class Window(FluentWindow):
             3. You may modify the templates, but {{placeholders}} must remain intact.
             """,
         )
-        app_data_path = os.path.join(os.environ.get("APPDATA"), "OrDraft", "Templates")
+        # template_path = self.view_model._data_model.get_path("templates")
+        template_path = os.path.join(self.view_model._data_model.app_data_path, "templates")
         try:
-            url = QUrl.fromLocalFile(app_data_path)
+            url = QUrl.fromLocalFile(template_path)
         except Exception as e:
             print(e)
-            os.makedirs(app_data_path, exist_ok=True)
+            os.makedirs(template_path, exist_ok=True)
         finally:
             QDesktopServices.openUrl(url)
 
