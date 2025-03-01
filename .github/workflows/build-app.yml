@@ -26,7 +26,7 @@ jobs:
 
       - name: Build Application with PyInstaller (macOS)
         run: |
-          pyinstaller OrDraft.spec
+          pyinstaller OrDraft-MacOS.spec
 
       - name: List Dist Folder Contents (macOS)
         run: ls -l dist
