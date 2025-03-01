@@ -5,7 +5,6 @@ cryptography==44.0.1
 docxtpl==0.19.1
 httpx==0.28.1
 idna==3.10
-lxml==5.2.1
 lxml==5.3.0
 openai==1.63.2
 pandas==2.2.3
