@@ -6,7 +6,11 @@ import json
 import requests
 import pdfplumber
 import re
+import numpy as np
+import io
+from PIL import Image
 
+from easyocr import Reader
 from enum import Enum
 from httpx import URL
 from openai import OpenAI
@@ -15,7 +19,7 @@ from PyQt6.QtCore import (
 )
 
 if __name__ == "__main__" or "pkgs" not in sys.modules:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
 from pkgs.config import (
     DismissalGuidelines,
@@ -27,7 +31,7 @@ from pkgs.config import (
     SYSTEM_PROMPT,
 )
 from pkgs.dataclass import Document
-from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY
+from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY, OCR_SPACE_API
 from pkgs.enums import TemplateType
 
 # fmt: on
@@ -289,6 +293,7 @@ class CloudLLM(QObject):
         self._api_key = self._llm_client.api_key
         self._model = None
 
+
         self._stop_requested = False
     def __post_init__(self):
         pass
@@ -321,6 +326,54 @@ class CloudLLM(QObject):
 
     def _create_prompt(self, role: str, prompt: str) -> dict:
         return {"role": role, "content": prompt}
+    
+    def _ocr_space_api(self, pil_image: Image):
+        """
+        Calls OCR.space API to perform OCR on the given image.
+        Compresses and resizes the image if it exceeds 1024 KB.
+
+        Args:
+            pil_image (PIL.Image): Image to be processed.
+
+        Returns:
+            str: Extracted text or empty string if OCR fails.
+        """
+        try:
+           
+            max_size_kb = 900 
+            quality = 50 
+            
+            with io.BytesIO() as img_buffer:
+               
+                pil_image = pil_image.convert("RGB") 
+                pil_image.save(img_buffer, format="JPEG", quality=quality)  
+                img_size_kb = len(img_buffer.getvalue()) // 1024 
+                
+                while img_size_kb > max_size_kb:
+                    new_width = int(pil_image.width * 0.8) 
+                    new_height = int(pil_image.height * 0.8) 
+                    pil_image = pil_image.resize((new_width, new_height), Image.ANTIALIAS)
+                    
+                    img_buffer = io.BytesIO()
+                    pil_image.save(img_buffer, format="JPEG", quality=quality)
+                    img_size_kb = len(img_buffer.getvalue()) // 1024 
+                
+                img_buffer.seek(0) 
+                
+                response = requests.post(
+                    "https://api.ocr.space/parse/image",
+                    files={"file": ("image.jpg", img_buffer, "image/jpeg")},
+                    data={"apikey": OCR_SPACE_API, "language": "eng"}
+                )
+            
+            result = response.json()
+            print(result["ParsedResults"][0]["ParsedText"].strip() if "ParsedResults" in result else "")  # Debugging purposes
+            return result["ParsedResults"][0]["ParsedText"].strip() if "ParsedResults" in result else ""
+        
+        except Exception as e:
+            print(f"Error in OCR.space API: {e}\n{traceback.format_exc()}")
+            return ""
+
 
     def _extract_text_from_pdf(self, pdf_path: str):
         """
@@ -331,21 +384,27 @@ class CloudLLM(QObject):
         """
         text = ""
         try:
-            # new: Open the PDF file using pdfplumber in a context manager
             with pdfplumber.open(pdf_path) as pdf:
-                # new: Iterate over each page and extract text
                 for page in pdf.pages:
                     page_text = page.extract_text()
+
+                    if not page_text:
+                        pil_image = page.to_image(resolution=300).original  
+                        page_text = self._ocr_space_api(pil_image)  
+
                     if page_text:
-                        text += page_text + "\n"
-            return text
+                        text += page_text
+
+            return text if text.strip() else None
+            
         except Exception as e:
-            print(f"Error occurred while extracting text: {e}")
+            print(f"Error occurred while extracting text: {e}: {traceback.format_exc()}")
+
             return None
         
     def build_prompt(self, data: Document):
         pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path)
-
+        print(pdf_text)
         guidelines = None
         template = None
         
@@ -353,6 +412,10 @@ class CloudLLM(QObject):
             TemplateType.RESO_WATER, TemplateType.RESO_PD, TemplateType.RESO_HW]:
             guidelines = RESO_DEFAULT_GUIDELINES
             template = RESO_TEMPLATE
+        # elif data.temp_doc_data.selected_template in [TemplateType.PENALTY_PD, 
+        #     TemplateType.DISMISSAL_WATER, TemplateType.PENALTY_AIR, TemplateType.PENALTY_HW]:
+        #     guidelines = RESO_DEFAULT_GUIDELINES
+        #     template = DISMISSAL_TEMPLATE
         else:
             base_guideline = DismissalGuidelines()
             base_guideline.document_type = data.temp_doc_data.selected_template
@@ -474,3 +537,8 @@ class CloudLLM(QObject):
                 return False, res
         else:
             return False, {"message": "JSON block not found in the response."}
+        
+if __name__ == "__main__":
+    test = CloudLLM()
+    text = test._extract_text_from_pdf("C:\\Users\\omarg\\Downloads\\WR WATER - R.V.R. MACHINE SHOP.pdf")
+    print(text)

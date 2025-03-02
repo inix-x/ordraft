@@ -7,6 +7,7 @@ import re
 from enum import Enum
 from functools import partial
 from typing import Union
+import subprocess
 
 
 from PyQt6.QtCore import (
@@ -431,8 +432,8 @@ class Window(FluentWindow):
         self._load_config()
         self._components()
 
-        size = QSize(800, 600) # 1150, 600
-        self.setMinimumSize(size)
+        size = QSize(800, 700) # 1150, 600
+        self.setMinimumSize(QSize(800, 600))
         self.setBaseSize(size)
         self.resize(size)
 
@@ -931,10 +932,14 @@ class Window(FluentWindow):
                     f"The directory '{absolute_path}' is not valid."
                 )
 
-            url = QUrl.fromLocalFile(absolute_path)
-
-            if not QDesktopServices.openUrl(url):
-                raise RuntimeError(f"Failed to open the folder: {absolute_path}")
+            if sys.platform == "darwin":  
+                result = subprocess.run(["open", absolute_path])  
+                if result.returncode != 0:  
+                    raise RuntimeError(f"Failed to open the folder: {absolute_path}")  
+            else:  
+                url = QUrl.fromLocalFile(absolute_path)
+                if not QDesktopServices.openUrl(url):
+                    raise RuntimeError(f"Failed to open the folder: {absolute_path}")
 
         except Exception as e:
             self.show_message_box("Error", str(e))
@@ -1136,6 +1141,4 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = Window()
     window.show()
-    exit_code = app.exec()  
-    input("Press Enter to exit...")  
-    sys.exit(exit_code)  
+    sys.exit(app.exec())  

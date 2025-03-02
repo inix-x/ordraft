@@ -237,14 +237,25 @@ class MainViewModel(QObject):
 
     def stop_agents(self):
         """Stop the worker and wait for the thread to finish."""
+        if self._cloud_llm_worker:
+            self._cloud_llm_worker.stop()
+        
+        if self._cloud_llm_worker_thread:
+            self._cloud_llm_worker_thread.requestInterruption()
+            self._cloud_llm_worker_thread.quit()
+            self._cloud_llm_worker_thread.wait()
+
+            self._cloud_llm_worker_thread = None
+            self._cloud_llm_worker = None
+        
+        # self._cloud_llm_worker.stop()
+        # self._cloud_llm_worker_thread.quit()
+        # self._cloud_llm_worker_thread.wait()
+
         # self._api_worker.stop()
         # self._api_worker_thread.quit()
         # self._api_worker_thread.wait()
 
-        
-        self._cloud_llm_worker.stop()
-        self._cloud_llm_worker_thread.quit()
-        self._cloud_llm_worker_thread.wait()
 
     @pyqtSlot()
     def open_document(self, id):
