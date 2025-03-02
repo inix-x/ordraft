@@ -29,9 +29,12 @@ Section "Install" SEC01
 
     ; new: Create installation directory (no subfolder)
     CreateDirectory "$INSTDIR"
+    
+    ; new: Set the output path to the installation directory so that files are placed here
+    SetOutPath "$INSTDIR"  ; # new
 
     ; new: Embed the main executable directly into the installer directory
-    File "dist\OrDraft.exe"
+    File "dist\OrDraft.exe"  ; # new
 SectionEnd
 
 # new: Custom page for additional post-install actions
