@@ -13,7 +13,6 @@ InstallDirRegKey HKLM "Software\OrDraft" "Install_Dir"
 
 Var MAIN_EXE
 Var CREATE_SHORTCUT           ; Stores user choice for shortcut creation
-Var R1                        ; Temporary variable for custom page controls
 
 ; MUI Pages
 !insertmacro MUI_PAGE_WELCOME
