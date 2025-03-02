@@ -1,43 +1,47 @@
 ; NSIS Installer Config for OrDraft
 ; This script embeds installation files using explicit File commands.
 
-# new: Basic installer settings
+; Basic installer settings
 Name "OrDraft Installer"
 OutFile "OrDraftInstaller.exe"
 InstallDir "$PROGRAMFILES\OrDraft"
 InstallDirRegKey HKLM "Software\OrDraft" "Install_Dir"
 
 !include "MUI2.nsh"
-!include "nsDialogs.nsh"         ; new: For custom pages
-!include "LogicLib.nsh"          ; new: For using ${If}/${Else} constructs
+!include "nsDialogs.nsh"         ; For custom pages
+!include "LogicLib.nsh"          ; For using ${If}/${Else} constructs
 
 Var MAIN_EXE
-Var CREATE_SHORTCUT           ; new: Stores user choice for shortcut creation
+Var CREATE_SHORTCUT           ; Stores user choice for shortcut creation
+Var R1                        ; Temporary variable for custom page controls
 
-# new: MUI pages (welcome, license, directory, custom options, install, finish)
+; MUI Pages
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
-Page custom ShortcutPageCreate ShortcutPageLeave   ; new: Custom page for extra actions
+Page custom ShortcutPageCreate ShortcutPageLeave   ; Custom page for additional options
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
-# new: Section for installing files
+; -------------------------------
+; Installation Section
+; -------------------------------
 Section "Install" SEC01
-    ; new: Remove any previous installation remnants before installing the new version.
+    ; Remove any previous installation remnants
     Call RemoveOldVersion
 
-    ; new: Create installation directory (no subfolder)
+    ; Ensure $INSTDIR is explicitly set to the default install directory.
+    StrCpy $INSTDIR "$PROGRAMFILES\OrDraft"
     CreateDirectory "$INSTDIR"
+    SetOutPath "$INSTDIR"
     
-    ; new: Set the output path to the installation directory so that files are placed here
-    SetOutPath "$INSTDIR"  ; # new
-
-    ; new: Embed the main executable directly into the installer directory
-    File "dist\OrDraft.exe"  ; # new
+    ; Embed the main executable from PyInstaller output.
+    File "dist\OrDraft.exe"
 SectionEnd
 
-# new: Custom page for additional post-install actions
+; -------------------------------
+; Custom Page: Shortcut Options
+; -------------------------------
 Function ShortcutPageCreate
     nsDialogs::Create 1018
     Pop $0
@@ -45,11 +49,11 @@ Function ShortcutPageCreate
         Abort
     ${EndIf}
 
-    ; new: Instruction label for extra actions
+    ; Create an instructional label.
     ${NSD_CreateLabel} 10u 10u 300u 12u "Select additional actions to perform after installation:"
     Pop $0
 
-    ; new: Checkbox for creating shortcuts (default checked)
+    ; Create a checkbox for shortcut creation (default checked).
     ${NSD_CreateCheckBox} 10u 30u 250u 12u "Create Desktop and Start Menu Shortcuts"
     Pop $R1
     ${NSD_SetState} $R1 ${BST_CHECKED}
@@ -57,12 +61,13 @@ Function ShortcutPageCreate
     nsDialogs::Show
 FunctionEnd
 
-# new: Function to capture user selections from the custom page
 Function ShortcutPageLeave
     ${NSD_GetState} $R1 $CREATE_SHORTCUT
 FunctionEnd
 
-# new: Function to remove previous installation remnants
+; -------------------------------
+; Remove Previous Installation
+; -------------------------------
 Function RemoveOldVersion
     DetailPrint "Checking for previous version..."
 
@@ -89,9 +94,11 @@ Function RemoveOldVersion
     ClearErrors
 FunctionEnd
 
-# new: Post-installation actions based on user choices from the custom page
+; -------------------------------
+; Post-Installation Actions
+; -------------------------------
 Function .onInstSuccess
-    ; new: Locate the main executable in $INSTDIR:
+    ; Verify the main executable exists in $INSTDIR.
     ClearErrors
     FindFirst $0 $1 "$INSTDIR\OrDraft.exe"
     IfErrors 0 +3
@@ -110,7 +117,9 @@ Function .onInstSuccess
     ${EndIf}
 FunctionEnd
 
-# new: Uninstaller section for complete removal of the application
+; -------------------------------
+; Uninstaller Section
+; -------------------------------
 Section "Uninstall"
     Delete "$INSTDIR\OrDraft.exe"
     RMDir /r "$INSTDIR"
