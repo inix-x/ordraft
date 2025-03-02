@@ -29,7 +29,7 @@ fi
 
 # Create a shortcut (a .command file) on the Desktop to run main.py
 DESKTOP_DIR="${HOME}/Desktop"
-SHORTCUT_NAME="Run_main.command"
+SHORTCUT_NAME="OrDraft.command"
 
 # Determine the absolute path for main.py (assuming it's in the same folder as this script)
 MAIN_PY_PATH="$(pwd)/main.py"
