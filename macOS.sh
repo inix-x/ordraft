@@ -1,23 +1,28 @@
 #!/bin/bash
-# Define variables for Python version and installer package name
-PYTHON_VERSION="3.12.5"
-PYTHON_PKG="python-${PYTHON_VERSION}-macos11.pkg"
-DOWNLOAD_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/${PYTHON_PKG}"
-
-# Download the Python installer if it doesn't already exist
-if [ ! -f "${PYTHON_PKG}" ]; then
-    echo "Downloading Python ${PYTHON_VERSION}..."
-    curl -O "${DOWNLOAD_URL}"
+# Check if python3 is installed
+if command -v python3 >/dev/null 2>&1; then
+    echo "Python is already installed. Skipping download and installation."
 else
-    echo "Installer ${PYTHON_PKG} already exists."
+    # Define variables for Python version and installer package name
+    PYTHON_VERSION="3.12.5"
+    PYTHON_PKG="python-${PYTHON_VERSION}-macos11.pkg"
+    DOWNLOAD_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/${PYTHON_PKG}"
+    
+    # Download the Python installer if it doesn't already exist
+    if [ ! -f "${PYTHON_PKG}" ]; then
+        echo "Downloading Python ${PYTHON_VERSION}..."
+        curl -O "${DOWNLOAD_URL}"
+    else
+        echo "Installer ${PYTHON_PKG} already exists."
+    fi
+
+    # Open the installer package (this will launch the installer GUI)
+    echo "Opening Python installer. Please complete the installation."
+    open "${PYTHON_PKG}"
+    
+    # Optionally wait for the user to confirm that installation is complete
+    read -p "After installing Python, press Enter to continue..."
 fi
-
-# Open the installer package (this will launch the installer GUI)
-echo "Opening Python installer. Please complete the installation."
-open "${PYTHON_PKG}"
-
-# Optionally wait for the user to confirm that installation is complete
-read -p "After installing Python, press Enter to continue..."
 
 # Install required Python packages if requirements.txt exists
 if [ -f "requirements.txt" ]; then
