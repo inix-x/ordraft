@@ -61,15 +61,14 @@ class DismissalGuidelines:
          raise TypeError("Document type must be a type of TemplatType")
       
       findings = None
-      if self.document_type == TemplateType.DISMISSAL_AIR:
+      if self.document_type in [TemplateType.DISMISSAL_AIR, TemplateType.PENALTY_AIR]:
          findings = "air quality"
-      if self.document_type == TemplateType.DISMISSAL_HW:
+      if self.document_type in [TemplateType.DISMISSAL_HW, TemplateType.PENALTY_HW]:
          findings = "HW or hazard or hazardous wastes"
-      if self.document_type == TemplateType.DISMISSAL_WATER:
+      if self.document_type in [TemplateType.DISMISSAL_WATER, TemplateType.PENALTY_WATER]:
          findings = "water quality"
-      if self.document_type == TemplateType.DISMISSAL_PD:
+      if self.document_type in [TemplateType.DISMISSAL_PD, TemplateType.PENALTY_PD]:
          findings = "PD or Presidential Decree"
-
 
       final_prompt = self._base_template.replace("<TEMPLATE_TYPE>", findings)
 

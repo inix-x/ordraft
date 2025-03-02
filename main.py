@@ -914,6 +914,10 @@ class Window(FluentWindow):
             TemplateType.RESO_HW,
             TemplateType.RESO_WATER,
             TemplateType.RESO_PD,
+            TemplateType.PENALTY_AIR,
+            TemplateType.PENALTY_WATER,
+            TemplateType.PENALTY_PD,
+            TemplateType.PENALTY_HW,
         ]:
             self.include_reply.setChecked(False)
             self.include_reply.setEnabled(False)

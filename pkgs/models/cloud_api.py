@@ -367,7 +367,6 @@ class CloudLLM(QObject):
                 )
             
             result = response.json()
-            print(result["ParsedResults"][0]["ParsedText"].strip() if "ParsedResults" in result else "")  # Debugging purposes
             return result["ParsedResults"][0]["ParsedText"].strip() if "ParsedResults" in result else ""
         
         except Exception as e:
@@ -404,7 +403,6 @@ class CloudLLM(QObject):
         
     def build_prompt(self, data: Document):
         pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path)
-        print(pdf_text)
         guidelines = None
         template = None
         
