@@ -1,10 +1,10 @@
-; NSIS Installer Config for OrDraft OF (Without zip2exe)
+; NSIS Installer Config for OrDraft
 ; This script embeds installation files using explicit File commands.
 
 # new: Basic installer settings
-Name "OrDraft OF Installer"
+Name "OrDraft Installer"
 OutFile "OrDraftInstaller.exe"
-InstallDir "$PROGRAMFILES\OrDraft OF"
+InstallDir "$PROGRAMFILES\OrDraft"
 InstallDirRegKey HKLM "Software\OrDraft" "Install_Dir"
 
 !include "MUI2.nsh"
@@ -27,10 +27,10 @@ Section "Install" SEC01
     ; new: Remove any previous installation remnants before installing the new version.
     Call RemoveOldVersion
 
-    ; new: Create installation directory
-    CreateDirectory "$INSTDIR\OrDraft-OF"
+    ; new: Create installation directory (no subfolder)
+    CreateDirectory "$INSTDIR"
 
-    ; new: Embed the main executable into the installer
+    ; new: Embed the main executable directly into the installer directory
     File "dist\OrDraft.exe"
 SectionEnd
 
@@ -64,14 +64,14 @@ Function RemoveOldVersion
     DetailPrint "Checking for previous version..."
 
     ClearErrors
-    RMDir /r "$INSTDIR\OrDraft-OF"
+    RMDir /r "$INSTDIR"
     IfErrors 0 +3
-        DetailPrint "Warning: Could not remove (or no) old installation directory at $INSTDIR\OrDraft-OF."
+        DetailPrint "Warning: Could not remove (or no) old installation directory at $INSTDIR."
     
     ClearErrors
-    Delete "$SMPROGRAMS\OrDraft\OrDraft OF.lnk"
+    Delete "$SMPROGRAMS\OrDraft\OrDraft.lnk"
     IfErrors 0 +3
-        DetailPrint "Warning: Could not delete Start Menu shortcut at $SMPROGRAMS\OrDraft\OrDraft OF.lnk."
+        DetailPrint "Warning: Could not delete Start Menu shortcut at $SMPROGRAMS\OrDraft\OrDraft.lnk."
     
     ClearErrors
     RMDir "$SMPROGRAMS\OrDraft"
@@ -79,9 +79,9 @@ Function RemoveOldVersion
         DetailPrint "Warning: Could not remove Start Menu folder at $SMPROGRAMS\OrDraft."
     
     ClearErrors
-    Delete "$DESKTOP\OrDraft OF.lnk"
+    Delete "$DESKTOP\OrDraft.lnk"
     IfErrors 0 +3
-        DetailPrint "Warning: Could not delete Desktop shortcut at $DESKTOP\OrDraft OF.lnk."
+        DetailPrint "Warning: Could not delete Desktop shortcut at $DESKTOP\OrDraft.lnk."
     
     ClearErrors
 FunctionEnd
@@ -90,7 +90,7 @@ FunctionEnd
 Function .onInstSuccess
     ; new: Locate the main executable in $INSTDIR:
     ClearErrors
-    FindFirst $0 $1 "$INSTDIR\OrDraft-OF\OrDraft.exe"
+    FindFirst $0 $1 "$INSTDIR\OrDraft.exe"
     IfErrors 0 +3
         MessageBox MB_OK "Error: No executable found in $INSTDIR."
         Abort
@@ -100,8 +100,8 @@ Function .onInstSuccess
     ${If} $CREATE_SHORTCUT == ${BST_CHECKED}
         DetailPrint "Creating shortcuts..."
         CreateDirectory "$SMPROGRAMS\OrDraft"
-        CreateShortCut "$SMPROGRAMS\OrDraft\OrDraft OF.lnk" "$INSTDIR\OrDraft-OF\OrDraft.exe" "" "$INSTDIR\OrDraft-OF\OrDraft.exe" 0
-        CreateShortCut "$DESKTOP\OrDraft OF.lnk" "$INSTDIR\OrDraft-OF\OrDraft.exe" "" "$INSTDIR\OrDraft-OF\OrDraft.exe" 0
+        CreateShortCut "$SMPROGRAMS\OrDraft\OrDraft.lnk" "$INSTDIR\OrDraft.exe" "" "$INSTDIR\OrDraft.exe" 0
+        CreateShortCut "$DESKTOP\OrDraft.lnk" "$INSTDIR\OrDraft.exe" "" "$INSTDIR\OrDraft.exe" 0
     ${Else}
         DetailPrint "Skipping shortcut creation as per user selection."
     ${EndIf}
@@ -109,10 +109,10 @@ FunctionEnd
 
 # new: Uninstaller section for complete removal of the application
 Section "Uninstall"
-    Delete "$INSTDIR\OrDraft-OF\OrDraft.exe"
-    RMDir /r "$INSTDIR\OrDraft-OF"
-    Delete "$DESKTOP\OrDraft OF.lnk"
-    Delete "$SMPROGRAMS\OrDraft\OrDraft OF.lnk"
+    Delete "$INSTDIR\OrDraft.exe"
+    RMDir /r "$INSTDIR"
+    Delete "$DESKTOP\OrDraft.lnk"
+    Delete "$SMPROGRAMS\OrDraft\OrDraft.lnk"
     RMDir "$SMPROGRAMS\OrDraft"
     DeleteRegKey HKLM "Software\OrDraft"
     RMDir /r "$APPDATA\Ordraft"
