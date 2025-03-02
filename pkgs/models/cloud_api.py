@@ -458,6 +458,7 @@ class CloudLLM(QObject):
                 temperature=0.77,
                 max_tokens=8192,
                 stream=True,
+                timeout=10
             )
 
             for message in chat_completion:
