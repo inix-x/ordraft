@@ -10,7 +10,6 @@ import numpy as np
 import io
 from PIL import Image
 
-from easyocr import Reader
 from enum import Enum
 from httpx import URL
 from openai import OpenAI
