@@ -12,7 +12,10 @@ on:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        macos-version: [macos-12, macos-latest]
+    runs-on: ${{ matrix.macos-version }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -54,7 +57,7 @@ jobs:
       - name: Upload macOS Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-installer
+          name: macos-installer-${{ matrix.macos-version }}
           path: dist/OrDraft.app.zip
 
   build-windows:
@@ -95,11 +98,17 @@ jobs:
     needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:
-      - name: Download macOS Installer Artifact
+      - name: Download macOS Installer Artifact for macos-12
         uses: actions/download-artifact@v4
         with:
-          name: macos-installer
-          path: macos_installer
+          name: macos-installer-macos-12
+          path: macos_installer/macos-12
+
+      - name: Download macOS Installer Artifact for macos-latest
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installer-macos-latest
+          path: macos_installer/macos-latest
 
       - name: Download Windows Installer Artifact
         uses: actions/download-artifact@v4
@@ -118,14 +127,24 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload macOS Release Asset
+      - name: Upload macOS Release Asset (macos-12)
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: macos_installer/OrDraft.app.zip
-          asset_name: OrDraft.app.zip
+          asset_path: macos_installer/macos-12/OrDraft.app.zip
+          asset_name: OrDraft_macos-12.app.zip
+          asset_content_type: application/zip
+
+      - name: Upload macOS Release Asset (macos-latest)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: macos_installer/macos-latest/OrDraft.app.zip
+          asset_name: OrDraft_macos-latest.app.zip
           asset_content_type: application/zip
 
       - name: Upload Windows Release Asset

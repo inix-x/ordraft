@@ -1,3 +1,4 @@
+requests==2.32.2
 certifi==2025.1.31
 chardet==5.2.0
 charset_normalizer==3.4.1
