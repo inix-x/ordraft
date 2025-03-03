@@ -42,10 +42,10 @@ class GenerateDocData:
 @dataclass
 class DocPayload:
     status: str
-    api_url: str | None = field(default=None)
+    api_url: str = field(default=None)
     model: Models = field(default=Models.deepseek_r1_distill_llama_8b)
-    api_response: dict | None = field(default=None)
-    error_occured: object | None  = field(default=None)
+    api_response: dict = field(default=None)
+    error_occured: object  = field(default=None)
 
     def validate(self):
         errors = []
@@ -63,7 +63,7 @@ class Document:
     temp_doc_data: GenerateDocData
     doc_payload: DocPayload
     _uuid: str = field(init=False, repr=False)  
-    file_name: str | None = field(default=None)
+    file_name: str = field(default=None)
     _save_filepath: str = field(init=False, repr=False)  
 
     def __post_init__(self):
@@ -125,8 +125,8 @@ class UpdateDocData:
     status: str
     name: str
     id: str 
-    file_path: str | None = field(default=None)
-    error: object | None = field(default=None)
+    file_path: str = field(default=None)
+    error: object = field(default=None)
 
     def validate(self):
         errors = []
