@@ -11,7 +11,6 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     )
 
 from pkgs.enums import TemplateType, Models, DocumentStatus
-from pkgs.enums import TemplateType, Models, DocumentStatus
 
 @dataclass
 class GenerateDocData:
@@ -64,7 +63,7 @@ class Document:
     temp_doc_data: GenerateDocData | None
     doc_payload: DocPayload | None
     _uuid: str = field(init=False, repr=False)  
-    file_name: str = field(default=None)
+    file_name: str | None = field(default=None)
     _save_filepath: str = field(init=False, repr=False)
     status: DocumentStatus = field(default=DocumentStatus.NEW)
     error: Exception = field(default=None)

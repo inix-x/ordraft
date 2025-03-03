@@ -1,4 +1,4 @@
-from enum import Enum, auto, auto
+from enum import Enum, auto
 
 class Models(Enum):
     deepseek_r1_distill_llama_8b = "deepseek-r1-distill-llama-8b"
@@ -10,7 +10,6 @@ class DocumentStatus(Enum):
     SCANNING       = auto()
     DATA_READY     = auto()
     DOCUMENT_READY = auto()
-
 
 class TemplateType(Enum):
     DISMISSAL_AIR   = "Dismissal - AIR"

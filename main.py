@@ -11,14 +11,14 @@ import subprocess
 
 
 from PyQt6.QtCore import (
-    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal, QTimer, QTimer
+    Qt, QDir, QUrl, QStandardPaths, QSize, pyqtSlot, pyqtSignal, QTimer
 )
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
     QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
     QWidget
 )
-from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence, QKeySequence
+from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence
 
 from qfluentwidgets import (
     NavigationItemPosition, FluentWindow, SubtitleLabel, setFont, QConfig,
@@ -446,11 +446,7 @@ class Window(FluentWindow):
         self.initWindow()
         self.settings_setup_ui()
         self.dismissal_setup_ui()
-        # self.draft_setup_ui()
-
-        if self.view_model._data_model.is_first_time() is True:
-            self._moved_data()
-            
+        self.draft_setup_ui()
         self._load_config()
         self._components()
 
