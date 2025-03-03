@@ -386,12 +386,8 @@ class CloudLLM(QObject):
                 for page in pdf.pages:
                     page_text = page.extract_text()
 
-                    if not page_text:
-                        pil_image = page.to_image(resolution=300).original  
-                        page_text = self._ocr_space_api(pil_image)  
-
                     if page_text:
-                        text += page_text
+                        text += page_text + "\n"
 
             return text if text.strip() else None
             
