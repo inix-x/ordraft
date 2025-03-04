@@ -480,7 +480,10 @@ class Window(FluentWindow):
 
     def _load_app_settings(self):
         save_loc = self.cfg.save_location.value
-        self.view_model.ocr_enabled = self.cfg.ocr_enable.value
+        try:
+            self.view_model.ocr_enabled = self.cfg.ocr_enable.value
+        except AttributeError:
+            self.view_model.ocr_enabled = self.cfg.ocr_enable
 
         if not len(save_loc) == 0:
             self._save_location(save_loc)
@@ -971,7 +974,8 @@ class Window(FluentWindow):
 
     @pyqtSlot(bool)
     def ocr_enable_change(self, state):
-        if state != self.cfg.ocr_enable.value:
+        if state != self.view_model.ocr_enabled:
+            self.view_model.ocr_enabled = state
             self.cfg.ocr_enable = state
             self.cfg.save()
 
@@ -1015,7 +1019,7 @@ class Window(FluentWindow):
             success, e = self.view_model.main_handler(data)
 
             if success is True:
-                self.stream_card.chatbox.setPlainText("Preparing... ")
+                self.stream_card.chatbox.setPlainText("Preparing...\n")
                 self.scan_stop_btn.data = "scanning"
                 self.scan_stop_btn.setText("Stop")
 
@@ -1060,6 +1064,7 @@ class Window(FluentWindow):
         self.show_message_box("Error", err)
         self.stream_card.chatbox.setPlainText("")
         self.scan_stop_btn.setText("Scan PDF")
+        self.generate_doc_btn.setEnabled(False)
 
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
