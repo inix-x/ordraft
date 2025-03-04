@@ -1,10 +1,13 @@
 # fmt: off
 import os
 import sys
+sys.setrecursionlimit(10000)
+
 import traceback
 import json
 import requests
 import pdfplumber
+import pikepdf
 import re
 import numpy as np
 import io
@@ -273,6 +276,7 @@ class CloudLLM(QObject):
     stream_finished = pyqtSignal(bool, str)
     status_changed = pyqtSignal(Document)
     text_chunk = pyqtSignal(str)
+    extra_chat_update = pyqtSignal(str)
     error_occured = pyqtSignal(object)
 
     stream_stopped = pyqtSignal(bool)
@@ -372,8 +376,18 @@ class CloudLLM(QObject):
             print(f"Error in OCR.space API: {e}\n{traceback.format_exc()}")
             return ""
 
+    def flatten_pdf_in_memory(self, pdf_path):  
+        try:  
+            with pikepdf.open(pdf_path) as pdf:  
+                output_buffer = io.BytesIO()  
+                pdf.save(output_buffer)  
+                output_buffer.seek(0)  
+                return output_buffer  
+        except Exception as e:  
+            print(f"Error flattening PDF: {e}")  
+            return None  
 
-    def _extract_text_from_pdf(self, pdf_path: str):
+    def _extract_text_from_pdf(self, pdf_path: str, ocr_enabled: bool = False):
         """
         Extracts text from the specified PDF file using pdfplumber.
 
@@ -381,27 +395,36 @@ class CloudLLM(QObject):
             str: The extracted text or None if extraction fails.
         """
         text = ""
+        pdf_source = None
+        if ocr_enabled is True:
+            pdf_buffer = self.flatten_pdf_in_memory(pdf_path)
+            if pdf_buffer is not None:
+                pdf_source = pdf_buffer
+            else:
+                pdf_source = pdf_path
+
         try:
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
+            with pdfplumber.open(pdf_source) as pdf:
+                total_pages = len(pdf.pages)
+                for idx, page in enumerate(pdf.pages):
                     page_text = page.extract_text()
 
-                    if not page_text:
+                    if not page_text and ocr_enabled is True:
+                        self.extra_chat_update.emit(f"\nScanning with OCR... {int(((idx - 1) / total_pages) * 100)}%")
                         pil_image = page.to_image(resolution=300).original  
                         page_text = self._ocr_space_api(pil_image)  
 
                     if page_text:
                         text += page_text + "\n"
 
+            self.extra_chat_update.emit("\nI will now start analyzing the document\n")
             return text if text.strip() else None
-            
         except Exception as e:
             print(f"Error occurred while extracting text: {e}: {traceback.format_exc()}")
-
             return None
         
     def build_prompt(self, data: Document):
-        pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path)
+        pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path, data.ocr_enable)
         guidelines = None
         template = None
         

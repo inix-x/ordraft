@@ -41,6 +41,8 @@ class MainViewModel(QObject):
     def __init__(self, data_model: Data = None):
         super().__init__()
 
+        self.ocr_enabled = False
+
         self._data_model = data_model
         self.word_processor = WordPlaceholderReplacer()
 
@@ -58,6 +60,7 @@ class MainViewModel(QObject):
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
+        self._cloud_llm.extra_chat_update.connect(self._update_chat_box)
 
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
@@ -86,7 +89,8 @@ class MainViewModel(QObject):
             doc_payload.validate()
             document = Document(
                 temp_doc_data=data,
-                doc_payload=doc_payload
+                doc_payload=doc_payload,
+                ocr_enable=self.ocr_enabled
             )
             doc_status = UpdateDocData(
                 id=document.id,
@@ -166,7 +170,9 @@ class MainViewModel(QObject):
     def _update_chat_box(self, text_chunk):
         if text_chunk not in ["<think>", "</think>"]:
             self.chatbox_update.emit(text_chunk)
-    
+        else:
+            self.chatbox_update.emit(text_chunk)
+   
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
         self.errorOccured.emit(err)

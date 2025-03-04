@@ -62,9 +62,10 @@ class DocPayload:
 class Document:
     temp_doc_data: GenerateDocData
     doc_payload: DocPayload
+    ocr_enable: bool
     _uuid: str = field(init=False, repr=False)  
     file_name: str = field(default=None)
-    _save_filepath: str = field(init=False, repr=False)  
+    _save_filepath: str = field(init=False, repr=False)
 
     def __post_init__(self):
         self.save_filepath = ""
