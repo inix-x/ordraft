@@ -1,11 +1,15 @@
 # fmt: off
 import os
 import sys
-sys.setrecursionlimit(10000)
 import pdf2image
 import pytesseract
 if sys.platform.startswith('win'):
     pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+elif sys.platform == 'darwin':
+    if os.path.exists('/opt/homebrew/bin/tesseract'):
+        pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
+    elif os.path.exists('/usr/local/bin/tesseract'):
+        pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
 
 import traceback
 import json
@@ -41,6 +45,8 @@ from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY
 from pkgs.enums import TemplateType
 
 # fmt: on
+
+sys.setrecursionlimit(10000)
 
 HEADERS = {"Content-Type": "application/json"}
 __ENDPOINT_NAMESPACE__ = "inix-x"
