@@ -67,6 +67,7 @@ class Config(QConfig):
     save_location = ConfigItem(
         "App", "SaveLocation", ""
     )
+    ocr_enable = ConfigItem("App", "EnableOCR", False, BoolValidator())
 
 
 class Container(QFrame):
@@ -498,6 +499,10 @@ class Window(FluentWindow):
 
     def _load_app_settings(self):
         save_loc = self.cfg.save_location.value
+        try:
+            self.view_model.ocr_enabled = self.cfg.ocr_enable.value
+        except AttributeError:
+            self.view_model.ocr_enabled = self.cfg.ocr_enable
 
         if not len(save_loc) == 0:
             self._save_location(save_loc)
@@ -522,6 +527,13 @@ class Window(FluentWindow):
         # UI: APP
         app_settings = SubtitleLabel("App", self)
         setFont(app_settings, 18)
+
+        self.ocr_enable = SwitchSettingCard(
+            icon=FIF.DOCUMENT,
+            title="Enable OCR",
+            content="Enabling this will give power to OrDraft to read Scanned Document",
+            configItem=self.cfg.ocr_enable
+        )
 
         self.template_dir = CustomPushSettingCard(
             text="Show",
@@ -567,6 +579,7 @@ class Window(FluentWindow):
         # Connections: App
         self.api_url.button.clicked.connect(self._show_change_api_url)
         self.template_dir.button.clicked.connect(self.show_template_dir)
+        self.ocr_enable.switchButton.checkedChanged.connect(self.ocr_enable_change)
 
         # Connections: Aeshethics
         dark_theme.switchButton.checkedChanged.connect(
@@ -583,6 +596,9 @@ class Window(FluentWindow):
 
         self.settings_interface.vBoxlayout.addWidget(
             app_settings, alignment=Qt.AlignmentFlag.AlignTop
+        )
+        self.settings_interface.vBoxlayout.addWidget(
+            self.ocr_enable, alignment=Qt.AlignmentFlag.AlignTop
         )
         self.settings_interface.vBoxlayout.addWidget(
             self.template_dir, alignment=Qt.AlignmentFlag.AlignTop
@@ -1017,6 +1033,13 @@ class Window(FluentWindow):
 
         if self.message_box.exec():
             pass
+
+    @pyqtSlot(bool)
+    def ocr_enable_change(self, state):
+        if state != self.view_model.ocr_enabled:
+            self.view_model.ocr_enabled = state
+            self.cfg.ocr_enable = state
+            self.cfg.save()
 
     def show_template_dir(self):
         self.show_message_box(

@@ -17,4 +17,6 @@ PyQt6_Fluent_Widgets==1.7.4
 simplejson==3.20.1
 typing_extensions==4.12.2
 urllib3==2.3.0
-pyinstaller==6.11.1
+pdf2image==1.17.0
+pytesseract==0.3.13
+pikepdf==9.5.2

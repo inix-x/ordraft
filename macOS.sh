@@ -32,6 +32,17 @@ else
     echo "No requirements.txt found. Skipping package installation."
 fi
 
+if [[ "$(uname)" == "Darwin" ]]; then
+
+    if command -v brew >/dev/null 2>&1; then
+        echo "Homebrew found. Installing Poppler..."
+        brew install poppler
+    else
+        echo "Homebrew is not installed. Please install Homebrew (https://brew.sh) to automatically install Poppler."
+        exit 1
+    fi
+fi
+
 # Create a shortcut (a .command file) on the Desktop to run main.py
 DESKTOP_DIR="${HOME}/Desktop"
 SHORTCUT_NAME="OrDraft.command"

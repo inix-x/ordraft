@@ -62,6 +62,7 @@ class DocPayload:
 class Document:
     temp_doc_data: GenerateDocData | None
     doc_payload: DocPayload | None
+    ocr_enable: bool
     _uuid: str = field(init=False, repr=False)  
     file_name: str | None = field(default=None)
     _save_filepath: str = field(init=False, repr=False)

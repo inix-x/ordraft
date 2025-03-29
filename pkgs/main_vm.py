@@ -41,6 +41,8 @@ class MainViewModel(QObject):
     def __init__(self, data_model: Data = None):
         super().__init__()
 
+        self.ocr_enabled = False
+
         self._data_model = data_model
         self.word_processor = WordPlaceholderReplacer()
 
@@ -58,6 +60,7 @@ class MainViewModel(QObject):
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
+        self._cloud_llm.extra_chat_update.connect(self._update_chat_box)
 
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
@@ -101,6 +104,12 @@ class MainViewModel(QObject):
             document = Document(
                 temp_doc_data=data,
                 doc_payload=doc_payload,
+                ocr_enable=self.ocr_enabled
+            )
+            doc_status = UpdateDocData(
+                id=document.id,
+                status="Queued",
+                name=os.path.basename(data.pdf_path)[0]
             )
             self.documents.add(document)
             self._document = document
@@ -183,17 +192,13 @@ class MainViewModel(QObject):
             # self._api_worker.allow_next_task()
             pass
     
-    @pyqtSlot(bool, str)
-    def _update_chat_box(self, thoughts: bool, text_chunk: str):
-        if thoughts is True:
+    @pyqtSlot(str)
+    def _update_chat_box(self, text_chunk):
+        if text_chunk not in ["<think>", "</think>"]:
             self.chatbox_update.emit(text_chunk)
         else:
-            self._thinking = False
-
-        if self._thinking is False and self._stream_stopped is False:
-            self.chatbox_update.emit("\nPlease wait as I prepare the data extracted.")
-            self._thinking = True
-
+            self.chatbox_update.emit(text_chunk)
+   
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
         self.errorOccured.emit(err)

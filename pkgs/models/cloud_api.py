@@ -1,10 +1,21 @@
 # fmt: off
 import os
 import sys
+import pdf2image
+import pytesseract
+if sys.platform.startswith('win'):
+    pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+elif sys.platform == 'darwin':
+    if os.path.exists('/opt/homebrew/bin/tesseract'):
+        pytesseract.pytesseract.tesseract_cmd = r'/opt/homebrew/bin/tesseract'
+    elif os.path.exists('/usr/local/bin/tesseract'):
+        pytesseract.pytesseract.tesseract_cmd = r'/usr/local/bin/tesseract'
+
 import traceback
 import json
 import requests
 import pdfplumber
+import pikepdf
 import re
 import numpy as np
 import io
@@ -30,10 +41,12 @@ from pkgs.config import (
     SYSTEM_PROMPT,
 )
 from pkgs.dataclass import Document
-from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY, OCR_SPACE_API
+from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY
 from pkgs.enums import TemplateType
 
 # fmt: on
+
+sys.setrecursionlimit(10000)
 
 HEADERS = {"Content-Type": "application/json"}
 __ENDPOINT_NAMESPACE__ = "inix-x"
@@ -273,6 +286,7 @@ class CloudLLM(QObject):
     stream_finished = pyqtSignal(bool, str)
     status_changed = pyqtSignal(Document)
     text_chunk = pyqtSignal(bool, str)
+    extra_chat_update = pyqtSignal(str)
     error_occured = pyqtSignal(object)
 
     stream_start = pyqtSignal(bool)
@@ -327,54 +341,54 @@ class CloudLLM(QObject):
     def _create_prompt(self, role: str, prompt: str) -> dict:
         return {"role": role, "content": prompt}
     
-    def _ocr_space_api(self, pil_image: Image):
-        """
-        Calls OCR.space API to perform OCR on the given image.
-        Compresses and resizes the image if it exceeds 1024 KB.
-
-        Args:
-            pil_image (PIL.Image): Image to be processed.
-
-        Returns:
-            str: Extracted text or empty string if OCR fails.
-        """
-        try:
-           
-            max_size_kb = 900 
-            quality = 50 
-            
-            with io.BytesIO() as img_buffer:
-               
-                pil_image = pil_image.convert("RGB") 
-                pil_image.save(img_buffer, format="JPEG", quality=quality)  
-                img_size_kb = len(img_buffer.getvalue()) // 1024 
-                
-                while img_size_kb > max_size_kb:
-                    new_width = int(pil_image.width * 0.8) 
-                    new_height = int(pil_image.height * 0.8) 
-                    pil_image = pil_image.resize((new_width, new_height), Image.ANTIALIAS)
-                    
-                    img_buffer = io.BytesIO()
-                    pil_image.save(img_buffer, format="JPEG", quality=quality)
-                    img_size_kb = len(img_buffer.getvalue()) // 1024 
-                
-                img_buffer.seek(0) 
-                
-                response = requests.post(
-                    "https://api.ocr.space/parse/image",
-                    files={"file": ("image.jpg", img_buffer, "image/jpeg")},
-                    data={"apikey": OCR_SPACE_API, "language": "eng"}
-                )
-            
-            result = response.json()
-            return result["ParsedResults"][0]["ParsedText"].strip() if "ParsedResults" in result else ""
+    def flatten_pdf_in_memory(self, pdf_path):  
+        try:  
+            with pikepdf.open(pdf_path) as pdf:  
+                output_buffer = io.BytesIO()  
+                pdf.save(output_buffer)  
+                output_buffer.seek(0)  
+                return output_buffer  
+        except Exception as e:  
+            print(f"Error flattening PDF: {e}")  
+            return None  
         
+    def pdf_to_text(self, pdf_path, poppler_path=None):
+        """
+        Convert a PDF file to text using Tesseract OCR.
+
+        :param pdf_path: Path to the PDF file.
+        :param poppler_path: (Optional) Path to the Poppler bin directory (Windows only).
+        :return: Extracted text from the PDF.
+        """
+        images = []
+        try:
+            if poppler_path and sys.platform.startswith('win'):
+                images = pdf2image.convert_from_path(pdf_path, poppler_path=poppler_path)
+            else:
+                images = pdf2image.convert_from_path(pdf_path)
         except Exception as e:
-            print(f"Error in OCR.space API: {e}\n{traceback.format_exc()}")
-            return ""
+            print(f"Error converting PDF: {e}")
+            if sys.platform.startswith('win'):
+                print("Attempting default Poppler path...")
+                try:
+                    default_poppler_path = r"C:\\Program Files (x86)\\Poppler\\poppler-24.08.0\\Library\\bin"
+                    images = pdf2image.convert_from_path(pdf_path, poppler_path=default_poppler_path)
+                except Exception as e2:
+                    raise RuntimeError("Couldn't find Poppler; please install it, update the poppler_path, or disable the OCR") from e2
+            else:
+                raise RuntimeError("Error converting PDF to images on non-Windows system. Please ensure Poppler is installed.") from e
+
+        full_text = ""
+        total_pages = len(images)
+        for page_number, image in enumerate(images, start=1):
+            self.extra_chat_update.emit(f"Scanning with OCR... {int(((page_number) / total_pages) * 100)}%\n")
+            page_text = pytesseract.image_to_string(image)
+            full_text += page_text + "\n"
+        
+        return full_text
 
 
-    def _extract_text_from_pdf(self, pdf_path: str):
+    def _extract_text_from_pdf(self, pdf_path: str, ocr_enabled: bool = False):
         """
         Extracts text from the specified PDF file using pdfplumber.
 
@@ -383,75 +397,81 @@ class CloudLLM(QObject):
         """
         text = ""
         try:
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
-
-                    if not page_text:
-                        pil_image = page.to_image(resolution=300).original  
-                        page_text = self._ocr_space_api(pil_image)  
-
-                    if page_text:
-                        text += page_text
-
+            if ocr_enabled is True:
+                text = self.pdf_to_text(pdf_path)
+            else:
+                with pdfplumber.open(pdf_path) as pdf:
+                    total_pages = len(pdf.pages)
+                    for idx, page in enumerate(pdf.pages):
+                        page_text = page.extract_text()
+                        self.extra_chat_update.emit(f"Reading... {int(((idx) / total_pages) * 100)}%\n")
+                        if page_text:
+                            text += page_text + "\n"
             return text if text.strip() else None
-            
         except Exception as e:
-            print(f"Error occurred while extracting text: {e}: {traceback.format_exc()}")
-
+            print(traceback.format_exc())
             return None
         
     def build_prompt(self, data: Document):
-        pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path)
-        guidelines = None
-        template = None
-        
-        if data.temp_doc_data.selected_template in [TemplateType.RESO_AIR, 
-            TemplateType.RESO_WATER, TemplateType.RESO_PD, TemplateType.RESO_HW]:
-            guidelines = RESO_DEFAULT_GUIDELINES
-            template = RESO_TEMPLATE
-        # elif data.temp_doc_data.selected_template in [TemplateType.PENALTY_PD, 
-        #     TemplateType.DISMISSAL_WATER, TemplateType.PENALTY_AIR, TemplateType.PENALTY_HW]:
-        #     guidelines = RESO_DEFAULT_GUIDELINES
-        #     template = DISMISSAL_TEMPLATE
-        else:
-            base_guideline = DismissalGuidelines()
-            base_guideline.document_type = data.temp_doc_data.selected_template
-            guidelines = base_guideline.guidelines
-            template = DISMISSAL_TEMPLATE
+        try:
+            pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path, data.ocr_enable)
 
-        user_prompt = f"""
-        **TASK**  
-        Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
+            if pdf_text is None:
+                raise RuntimeError(f"Unable to extract text from the Document")
+            
+            guidelines = None
+            template = None
+            
+            if data.temp_doc_data.selected_template in [TemplateType.RESO_AIR, 
+                TemplateType.RESO_WATER, TemplateType.RESO_PD, TemplateType.RESO_HW]:
+                guidelines = RESO_DEFAULT_GUIDELINES
+                template = RESO_TEMPLATE
+            # elif data.temp_doc_data.selected_template in [TemplateType.PENALTY_PD, 
+            #     TemplateType.DISMISSAL_WATER, TemplateType.PENALTY_AIR, TemplateType.PENALTY_HW]:
+            #     guidelines = RESO_DEFAULT_GUIDELINES
+            #     template = DISMISSAL_TEMPLATE
+            else:
+                base_guideline = DismissalGuidelines()
+                base_guideline.document_type = data.temp_doc_data.selected_template
+                guidelines = base_guideline.guidelines
+                template = DISMISSAL_TEMPLATE
 
-        {DEFAULT_INSTRUCTIONS}
-        {IMPORTANT_PROMPT}
-        {guidelines}
-        
-        **TEMPLATE (DO NOT MODIFY THE KEYS)**
-        Template:
-        {template}
+            user_prompt = f"""
+            **TASK**  
+            Please extract the following information from the text labeled as PDF_TEXT and fill in the JSON template exactly as shown below.
 
-        PDF_TEXT:
-        {pdf_text}
-        """
-        return user_prompt
+            {DEFAULT_INSTRUCTIONS}
+            {IMPORTANT_PROMPT}
+            {guidelines}
+            
+            **TEMPLATE (DO NOT MODIFY THE KEYS)**
+            Template:
+            {template}
+
+            PDF_TEXT:
+            {pdf_text}
+            """
+            return user_prompt
+        except Exception as e:
+            return e
 
     def assistant_message(self, document: Document):
         try:
             user_prompt_text = self.build_prompt(document)
+            if isinstance(user_prompt_text, Exception):
+                raise RuntimeError(str(user_prompt_text))
             user_prompt = self._create_prompt("user", user_prompt_text)
             system_prompt = self._create_prompt("system", SYSTEM_PROMPT)
         except Exception as prompt_error:
-            error_msg = f"Error building prompts: {prompt_error}"
-            self.error_occured.emit(error_msg)
-            return
-
+            self.stream_finished.emit(True, None)
+            self.error_occured.emit(str(prompt_error))
+            return 
+        
+        self.extra_chat_update.emit("\nI will now start analyzing the document\n")
         buffer: str = ""
         current_think_text: str = ""  
         
         self._stop_requested = False
-        
         try:
             self.stream_start.emit(True)
             chat_completion = self._llm_client.chat.completions.create(
