@@ -375,8 +375,26 @@ class CloudLLM(QObject):
                     images = pdf2image.convert_from_path(pdf_path, poppler_path=default_poppler_path)
                 except Exception as e2:
                     raise RuntimeError("Couldn't find Poppler; please install it, update the poppler_path, or disable the OCR") from e2
+            elif sys.platform == 'darwin':
+                print("Attempting default macOS Poppler paths...")
+                mac_poppler_paths = [
+                    "/opt/homebrew/bin",
+                    "/usr/local/bin", 
+                    "/opt/local/bin"  # MacPorts path
+                ]
+                success = False
+                for mac_path in mac_poppler_paths:
+                    try:
+                        images = pdf2image.convert_from_path(pdf_path, poppler_path=mac_path)
+                        success = True
+                        break
+                    except Exception:
+                        continue
+                
+                if not success:
+                    raise RuntimeError("Couldn't find Poppler on macOS. Please install it using 'brew install poppler' or 'port install poppler', or disable OCR.") from e
             else:
-                raise RuntimeError("Error converting PDF to images on non-Windows system. Please ensure Poppler is installed.") from e
+                raise RuntimeError("Error converting PDF to images. Please ensure Poppler is installed correctly for your system.") from e
 
         full_text = ""
         total_pages = len(images)
