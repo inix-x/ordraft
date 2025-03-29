@@ -16,7 +16,7 @@ from PyQt6.QtCore import (
 from PyQt6.QtWidgets import (
     QFrame, QApplication, QVBoxLayout, QHBoxLayout, 
     QSizePolicy, QFileDialog, QSpacerItem, QSplitter,
-    QWidget
+    QWidget, QListWidgetItem
 )
 from PyQt6.QtGui import QIcon, QColor, QPainter, QDesktopServices, QKeySequence
 
@@ -450,8 +450,8 @@ class Window(FluentWindow):
         self._load_config()
         self._components()
 
-        size = QSize(800, 700) # 1150, 600
-        self.setMinimumSize(QSize(800, 600))
+        size = QSize(1000, 700) # 1150, 600
+        self.setMinimumSize(QSize(1000, 600))
         self.setBaseSize(size)
         self.resize(size)
 
