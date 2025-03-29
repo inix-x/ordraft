@@ -193,7 +193,7 @@ class MainViewModel(QObject):
             pass
     
     @pyqtSlot(str)
-    def _update_chat_box(self, text_chunk):
+    def _update_chat_box(self, thinking, text_chunk):
         if text_chunk not in ["<think>", "</think>"]:
             self.chatbox_update.emit(text_chunk)
         else:
