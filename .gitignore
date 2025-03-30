@@ -10,3 +10,4 @@ __pycache__/
 .vscode/launch.json
 .vscode/settings.json
 logs/
+config.json
