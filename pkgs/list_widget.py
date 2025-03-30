@@ -1,6 +1,9 @@
 import os
 import sys
 from typing import Optional
+import os
+import sys
+from typing import Optional
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -12,6 +15,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QApplication,
+    QSizePolicy,
     QSizePolicy,
 )
 from PyQt6.QtCore import (
@@ -180,7 +184,7 @@ class QueueItem(QWidget):
             parent (Optional[QWidget]): The parent widget. Defaults to None.
         """
         super().__init__(parent)
-        self.id = id
+        self._id = id
         self._loop = loop
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         
@@ -194,12 +198,12 @@ class QueueItem(QWidget):
         self.change_theme(dark_theme)
 
     @property
-    def data(self):
-        return self.id
+    def id(self):
+        return self._id
 
-    @data.setter
-    def data(self, id):
-        self.id = id
+    @id.setter
+    def id(self, id):
+        self._id = id
 
     def init_ui(self, icon: Optional[CFIF]):
         """
@@ -234,6 +238,9 @@ class QueueItem(QWidget):
             self.icon = icon if icon is not None else self.icon
             self.icon_label.setIcon(self.icon.path(), self._loop)
 
+    def set_text(self, text: str):
+        self.text_label.setText(text)
+
     def hide_text(self):
         self.text_label.hide()
 
@@ -254,7 +261,11 @@ class AutoResizeLabel(QLabel):
         super().__init__(text, parent)
         self.setStyleSheet("color: green;")
         self.adjustSize()
+        self.adjustSize()
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def setText(self, text):
+        super().setText(text)
 
     def setText(self, text):
         super().setText(text)
@@ -271,14 +282,25 @@ class CustomListItem(QWidget):
         layout = QHBoxLayout(self)
 
         self.status = AutoResizeLabel(status)
+
+        self.status = AutoResizeLabel(status)
         self.status.setStyleSheet("color: #63FF9A;")
 
         self.name = QLabel(name)
 
         self.button = QPushButton()
+
+        self.button = QPushButton()
         self.button.setIconSize(QSize(16, 16))
         self.button.setFixedSize(QSize(24, 24))
+        self.button.setFixedSize(QSize(24, 24))
 
+        layout.addWidget(self.status)
+        layout.addWidget(self.name, stretch=1, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self.button)
+
+        layout.setContentsMargins(8, 4, 8, 4)
+        self.setLayout(layout)
         layout.addWidget(self.status)
         layout.addWidget(self.name, stretch=1, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self.button)
@@ -309,7 +331,32 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         self.list_widget = QListWidget()
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("List Widget with Custom Items")
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        self.list_widget = QListWidget()
         self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        main_layout.addWidget(self.list_widget)
+
+        for i in range(5):
+            item = QListWidgetItem()
+            custom_widget = CustomListItem(f"Item {i+1}")
+
+            custom_widget.button.clicked.connect(
+                lambda checked, index=i: self.on_button_clicked(index)
+            )
+
+            item.setSizeHint(custom_widget.sizeHint())
+
+            self.list_widget.addItem(item)
+
+            self.list_widget.setItemWidget(item, custom_widget)
         main_layout.addWidget(self.list_widget)
 
         for i in range(5):
@@ -328,6 +375,8 @@ class MainWindow(QMainWindow):
 
     def on_button_clicked(self, index):
         print(f"Button in item {index+1} clicked!")
+    def on_button_clicked(self, index):
+        print(f"Button in item {index+1} clicked!")
 
 
 def main():
@@ -335,7 +384,14 @@ def main():
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+def main():
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec())
 
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()

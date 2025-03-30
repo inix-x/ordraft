@@ -15,6 +15,8 @@ class MyFluentIcon(FluentIconBase, Enum):
     CANCELLED = "cancelled"
     SUCCESS = "success"
     STOPPED = "stopped"
+    PREPARE = "new_document"
+    
 
     def path(self, current_theme=Theme.AUTO, no_dark_theme: bool = False):
         _theme = theme()
@@ -22,3 +24,9 @@ class MyFluentIcon(FluentIconBase, Enum):
             return f'icons:{self.value}_{getIconColor(_theme)}.svg'
         else:
             return f'icons:{self.value}.svg'
+
+class CommandBarIcon(FluentIconBase, Enum):
+
+    AI_ASSISTANT = "ai_assistant"
+    def path(self, theme=Theme.AUTO):
+        return f'icons:{self.value}_{getIconColor(theme)}.svg'

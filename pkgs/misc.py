@@ -17,6 +17,17 @@ class Data:
             return os.path.join(os.path.expanduser("~/Library/Application Support"), "OrDraft")
         else:  # Linux & other OS
             return os.path.join(os.path.expanduser("~/.config"), "OrDraft")
+
+    @staticmethod
+    def data_path():
+        system = platform.system()
+
+        if system == "Windows":
+            return os.path.join(os.environ.get("APPDATA", os.path.expanduser("~\\AppData\\Roaming")), "OrDraft")
+        elif system == "Darwin":  # macOS
+            return os.path.join(os.path.expanduser("~/Library/Application Support"), "OrDraft")
+        else:  # Linux & other OS
+            return os.path.join(os.path.expanduser("~/.config"), "OrDraft")
     
     def get_path(self, relative_path=None):
         """

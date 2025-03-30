@@ -3,6 +3,9 @@
         "darkTheme": true,
         "TransparentSubInterface": false
     },
+    "App": {
+        "EnableOCR": true
+    },
     "QFluentWidgets": {
         "ThemeColor": "#ff3cb969",
         "ThemeMode": "Dark"
