@@ -86,7 +86,7 @@ class PlainFormatter(logging.Formatter):
         return formatted
 
 logger = logging.getLogger("ordraft")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 if not logger.handlers:
     # Console handler with colored output
