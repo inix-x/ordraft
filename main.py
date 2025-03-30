@@ -1191,6 +1191,10 @@ class Window(FluentWindow):
 
         if document.status == DocumentStatus.SCANNING:
             self.scan_stop_btn_pr.setText("Stop")
+            self.generate_doc_btn_pr.setEnabled(False)
+
+        if document.status == DocumentStatus.DATA_READY:
+            self.generate_doc_btn_pr.setEnabled(True)
 
         self.file_button_pr.data = document.temp_doc_data.pdf_path
         file_basename = os.path.basename(document.temp_doc_data.pdf_path)
