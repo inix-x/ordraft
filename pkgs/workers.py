@@ -14,6 +14,7 @@ if __name__ == "__main__" or "pkgs" not in sys.modules:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../")))
 
 from pkgs.dataclass import Document
+from pkgs.enums import DocumentStatus
 
 # fmt: on
 
@@ -93,6 +94,7 @@ class BackgroundWorker(QObject):
 
 
 class AgentWorker(QObject):
+    now_running = pyqtSignal(Document)
     status_changed = pyqtSignal(Document)
     finished = pyqtSignal(bool)
     error_occured = pyqtSignal(object)
@@ -130,7 +132,7 @@ class AgentWorker(QObject):
             self._mutex.unlock()
             time.sleep(1)
             try:
-                func, task_data = self._task_queue.get(timeout=1)
+                func, document = self._task_queue.get(timeout=1)
                 if func is None:
                     self.error_occured.emit(
                         "Received an invalid task (None). Skipping..."
@@ -140,7 +142,16 @@ class AgentWorker(QObject):
             except queue.Empty:
                 continue
 
-            func(task_data)
+            document: Document
+            
+            document.status = DocumentStatus.SCANNING
+            self.now_running.emit(document)
+
+            func(document)
+            
+            document.status = DocumentStatus.DATA_READY
+            self.now_running.emit(document)
+            
             self._task_queue.task_done()
 
         print("Agent 2 Stopping")

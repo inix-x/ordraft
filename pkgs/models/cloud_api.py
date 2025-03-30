@@ -283,10 +283,10 @@ class HuggingFaceAPI(QObject):
 
 
 class CloudLLM(QObject):
-    stream_finished = pyqtSignal(bool, str)
+    stream_finished = pyqtSignal(bool, str, str)
     status_changed = pyqtSignal(Document)
-    text_chunk = pyqtSignal(bool, str)
-    extra_chat_update = pyqtSignal(str)
+    text_chunk = pyqtSignal(bool, str, str)
+    extra_chat_update = pyqtSignal(str, str)
     error_occured = pyqtSignal(object)
 
     stream_start = pyqtSignal(bool)
@@ -352,7 +352,7 @@ class CloudLLM(QObject):
             print(f"Error flattening PDF: {e}")  
             return None  
         
-    def pdf_to_text(self, pdf_path, poppler_path=None):
+    def pdf_to_text(self, pdf_path, document_id, poppler_path=None):
         """
         Convert a PDF file to text using Tesseract OCR.
 
@@ -399,14 +399,14 @@ class CloudLLM(QObject):
         full_text = ""
         total_pages = len(images)
         for page_number, image in enumerate(images, start=1):
-            self.extra_chat_update.emit(f"Scanning with OCR... {int(((page_number) / total_pages) * 100)}%\n")
+            self.extra_chat_update.emit(f"Scanning with OCR... {int(((page_number) / total_pages) * 100)}%\n", document_id)
             page_text = pytesseract.image_to_string(image)
             full_text += page_text + "\n"
         
         return full_text
 
 
-    def _extract_text_from_pdf(self, pdf_path: str, ocr_enabled: bool = False):
+    def _extract_text_from_pdf(self, pdf_path: str, document_id: str, ocr_enabled: bool = False):
         """
         Extracts text from the specified PDF file using pdfplumber.
 
@@ -416,13 +416,13 @@ class CloudLLM(QObject):
         text = ""
         try:
             if ocr_enabled is True:
-                text = self.pdf_to_text(pdf_path)
+                text = self.pdf_to_text(pdf_path, document_id=document_id)
             else:
                 with pdfplumber.open(pdf_path) as pdf:
                     total_pages = len(pdf.pages)
                     for idx, page in enumerate(pdf.pages):
                         page_text = page.extract_text()
-                        self.extra_chat_update.emit(f"Reading... {int(((idx) / total_pages) * 100)}%\n")
+                        self.extra_chat_update.emit(f"Reading... {int(((idx) / total_pages) * 100)}%\n", document_id)
                         if page_text:
                             text += page_text + "\n"
             return text if text.strip() else None
@@ -432,7 +432,7 @@ class CloudLLM(QObject):
         
     def build_prompt(self, data: Document):
         try:
-            pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path, data.ocr_enable)
+            pdf_text = self._extract_text_from_pdf(data.temp_doc_data.pdf_path, data.id, data.ocr_enable)
 
             if pdf_text is None:
                 raise RuntimeError(f"Unable to extract text from the Document")
@@ -481,11 +481,11 @@ class CloudLLM(QObject):
             user_prompt = self._create_prompt("user", user_prompt_text)
             system_prompt = self._create_prompt("system", SYSTEM_PROMPT)
         except Exception as prompt_error:
-            self.stream_finished.emit(True, None)
+            self.stream_finished.emit(True, None, document.id)
             self.error_occured.emit(str(prompt_error))
             return 
         
-        self.extra_chat_update.emit("\nI will now start analyzing the document\n")
+        self.extra_chat_update.emit("\nI will now start analyzing the document\n", document.id)
         buffer: str = ""
         current_think_text: str = ""  
         
@@ -528,22 +528,22 @@ class CloudLLM(QObject):
                         if new_text.startswith(current_think_text):
                             delta = new_text[len(current_think_text):]
                             if delta:
-                                self.text_chunk.emit(True, delta)
+                                self.text_chunk.emit(True, delta, document.id)
                                 current_think_text += delta
                         else:
-                            self.text_chunk.emit(True, new_text)
+                            self.text_chunk.emit(True, new_text, document.id)
                             current_think_text = new_text
 
                         if end_idx != -1:
                             buffer = buffer[end_idx + len("</think>"):]
                             current_think_text = ""
-                            self.text_chunk.emit(False, "")
+                            self.text_chunk.emit(False, "", document.id)
 
         except Exception as e:
             self.error_occured.emit(f"\n[Error] {str(e)}")
         finally:
             completed = not self._stop_requested
-            self.stream_finished.emit(completed, buffer)
+            self.stream_finished.emit(completed, buffer, document.id)
 
     def stop(self):
         """Call this method to stop the streaming process."""

@@ -15,6 +15,7 @@ class MyFluentIcon(FluentIconBase, Enum):
     CANCELLED = "cancelled"
     SUCCESS = "success"
     STOPPED = "stopped"
+    PREPARE = "new_document"
     
 
     def path(self, current_theme=Theme.AUTO, no_dark_theme: bool = False):

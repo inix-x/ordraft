@@ -2,6 +2,7 @@ import os
 import sys
 import traceback
 from pathlib import Path
+from typing import Optional
 
 from PyQt6.QtCore import QObject, pyqtSignal, pyqtSlot, QThread, QEventLoop
 
@@ -32,9 +33,10 @@ class MainViewModel(QObject):
     docEvents = pyqtSignal(Document)
     docOpened = pyqtSignal(str, object)
 
-    chatbox_update = pyqtSignal(str)
+    now_running = pyqtSignal(Document)
+    chatbox_update = pyqtSignal(str, str)
 
-    llm_stream_finished = pyqtSignal(bool)
+    llm_stream_finished = pyqtSignal(bool, str)
     stream_stopped_sucess = pyqtSignal(bool)
     
 
@@ -60,7 +62,7 @@ class MainViewModel(QObject):
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
-        self._cloud_llm.extra_chat_update.connect(self._update_chat_box)
+        self._cloud_llm.extra_chat_update.connect(self._update_chat_box_extra)
 
         self._cloud_llm.error_occured.connect(self._cloud_llm_error)
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
@@ -80,18 +82,31 @@ class MainViewModel(QObject):
     def doc_ui_map(self):
         return self._doc_map
     
+    def set_current_document(self, id: str) -> Document:
+        self._document = self.documents[id]
+        return self._document
+    
     def new_document(self) -> Document:
         document = Document(
             temp_doc_data=None,
-            doc_payload=None
+            doc_payload=None,
+            ocr_enable=self.ocr_enabled,
+            generated_data=""
         )
+        self.documents.add(document)
         return document
+    
+    def get_document(self, id: str) -> Document:
+        return self.documents[id]
         
-    def get_unused_document(self) -> Document:
-       for document in self.documents:
-           print(document)
+    def get_unused_document(self) -> Document | None:
+        for document in self.documents:
+            if document.temp_doc_data is None:
+                return document
 
-    def main_handler(self, data: GenerateDocData) -> tuple[bool, object]:
+        return None
+
+    def main_handler(self, data: GenerateDocData, document: Optional[Document]) -> tuple[bool, object]:
         doc_payload = None
         try:
             data.validate()
@@ -101,29 +116,29 @@ class MainViewModel(QObject):
                 model=data.model
             )
             doc_payload.validate()
-            document = Document(
-                temp_doc_data=data,
-                doc_payload=doc_payload,
-                ocr_enable=self.ocr_enabled
-            )
-            doc_status = UpdateDocData(
-                id=document.id,
-                status="Queued",
-                name=os.path.basename(data.pdf_path)[0]
-            )
-            self.documents.add(document)
+
+            if document is None:
+                document = Document(
+                    temp_doc_data=data,
+                    doc_payload=doc_payload,
+                    ocr_enable=self.ocr_enabled
+                )
+            else:
+                document.temp_doc_data = data
+                document.doc_payload = doc_payload
+
             self._document = document
             self.docEvents.emit(document)
-            self.set_template(data.selected_template, data.is_reply_included)
+            # self.set_template(data.selected_template, data.is_reply_included)
         except Exception as ve:
             print(traceback.format_exc())
             self.errorOccured.emit(str(ve))
             return False, ve
-            
+
         try:
             # self._api_worker.add_task(data=document)
             self._cloud_llm_worker.add_task(self._cloud_llm.assistant_message, data=document)
-            return True, None
+            return True, document
         except Exception as e:
             self.errorOccured.emit(str(e))
             return False, e
@@ -166,7 +181,7 @@ class MainViewModel(QObject):
                 name=doc.file_name,
             )
             self.docEvents.emit(doc)
-
+            self.set_template(doc.temp_doc_data.selected_template, doc.temp_doc_data.is_reply_included)
             result: Document = self.word_processor.draft_dismissal(doc)
             if isinstance(result.doc_payload.error_occured, Exception):
                 raise ValueError(f"Document: {result.doc_payload.error_occured}")
@@ -192,26 +207,29 @@ class MainViewModel(QObject):
             # self._api_worker.allow_next_task()
             pass
     
-    @pyqtSlot(str)
-    def _update_chat_box(self, thinking, text_chunk):
-        if text_chunk not in ["<think>", "</think>"]:
-            self.chatbox_update.emit(text_chunk)
-        else:
-            self.chatbox_update.emit(text_chunk)
+    @pyqtSlot(bool, str, str)
+    def _update_chat_box(self, thinking, text_chunk, id):
+        document = self.documents[id]
+        document.generated_data += text_chunk
+        self.chatbox_update.emit(id, text_chunk)
+
+    @pyqtSlot(str, str)
+    def _update_chat_box_extra(self, text_chunk, id):
+        self.chatbox_update.emit(id, text_chunk)
    
     @pyqtSlot(object)
     def _cloud_llm_error(self, err):
         self.errorOccured.emit(err)
 
-    @pyqtSlot(bool, str)
-    def _cloud_llm_stream_finished(self, state, output):
+    @pyqtSlot(bool, str, str)
+    def _cloud_llm_stream_finished(self, state, output, id):
         success, parsed_output = self._cloud_llm._parse_response(output)
-        
+        document = self.documents[id]
         if success:
-            self._document.doc_payload.status = "Success"
-            self._document.doc_payload.api_response = parsed_output
+            document.doc_payload.status = "Success"
+            document.doc_payload.api_response = parsed_output
         
-        self.llm_stream_finished.emit(state)
+        self.llm_stream_finished.emit(state, id)
     
     @pyqtSlot(bool)
     def _start_streaming(self, state):
@@ -224,6 +242,10 @@ class MainViewModel(QObject):
         self.stream_stopped_sucess.emit(state)
         self._stream_stopped = True
     
+    @pyqtSlot(Document)
+    def _document_now_running(self, document: Document):
+        self.now_running.emit(document)
+
     @pyqtSlot(Document)
     def _handle_status_changed(self, doc: Document):
         try:
@@ -267,6 +289,7 @@ class MainViewModel(QObject):
         self._cloud_llm_worker_thread = QThread()
         self._cloud_llm_worker = AgentWorker()
         self._cloud_llm_worker.status_changed.connect(self._handle_status_changed) # not activated yet
+        self._cloud_llm_worker.now_running.connect(self._document_now_running)
         self._cloud_llm_worker.finished.connect(self._cloud_llm_worker_thread.quit)
         self._cloud_llm_worker.error_occured.connect(self._handle_error)
         self._cloud_llm_worker.moveToThread(self._cloud_llm_worker_thread)

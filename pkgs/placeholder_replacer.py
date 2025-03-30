@@ -49,7 +49,7 @@ class WordPlaceholderReplacer:
 
             case_number: str = api_data.api_response.get("case_number")
             api_data.api_response["case_number_only"] = case_number[-9:]
-
+            
             self._replace_placeholders(api_data.api_response)
             doc_filepath = self._save(document.temp_doc_data.save_path, case_number, document.temp_doc_data.selected_template)
             

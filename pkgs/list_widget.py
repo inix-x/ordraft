@@ -238,6 +238,9 @@ class QueueItem(QWidget):
             self.icon = icon if icon is not None else self.icon
             self.icon_label.setIcon(self.icon.path(), self._loop)
 
+    def set_text(self, text: str):
+        self.text_label.setText(text)
+
     def hide_text(self):
         self.text_label.hide()
 
