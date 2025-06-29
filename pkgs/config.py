@@ -177,7 +177,3 @@ RESO_TEMPLATE = '''{
     "date_of_motion_for_recon": "",
 }
 '''
-
-
-NOVITA_KEY= 'sk_DyKz7flavRxAMZ9MP1aF2oLj-w_cP8JuG0IGTH9Nu7s'
-NOVITA = '39fffc5dbcd016b8573aed134dd96752efa5bce6b7d69a146e3206b0c426d0d4'
