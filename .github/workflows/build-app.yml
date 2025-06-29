@@ -1,0 +1,158 @@
+# new
+name: Build and Package App for macOS and Windows
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # build-macos:
+  #   strategy:
+  #     matrix:
+  #       macos-version: [macos-12]
+  #   runs-on: ${{ matrix.macos-version }}
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v3
+
+  #     - name: Setup Python Environment (macOS)
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.12.5'
+
+  #     - name: Install Dependencies (macOS)
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install -r requirements-macOS.txt
+
+  #     - name: Build Application with PyInstaller (macOS)
+  #       run: |
+  #         pyinstaller --onefile --windowed main.py --clean --noconfirm --add-data "resource:resource" --add-data "resource/icons:resource/icons" --add-data "templates:templates" --add-data "config.json:." --hidden-import pkgs --name OrDraft --icon resource/icon.ico
+
+  #     - name: List Dist Folder Contents (macOS)
+  #       run: ls -l dist
+
+  #     - name: Check Disk Space (macOS)
+  #       run: df -h
+
+  #     - name: Check .app Size (macos)
+  #       run: du -sh dist/OrDraft.app
+
+  #     - name: Clean up Build Artifacts (macOS)
+  #       run: |
+  #         rm -rf build
+  #         rm -rf ~/Library/Caches/PyInstaller || true
+
+  #     # new: Zip the .app bundle for distribution
+  #     - name: Zip .app Bundle
+  #       run: |
+  #         cd dist
+  #         zip -r OrDraft.app.zip OrDraft.app
+
+  #     - name: Upload macOS Installer Artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: macos-installer-${{ matrix.macos-version }}
+  #         path: dist/OrDraft.app.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python Environment (Windows)
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.5'
+
+      - name: Install Dependencies (Windows)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Application with PyInstaller (Windows)
+        run: |
+          pyinstaller OrDraft.spec
+
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+
+      - name: Create NSIS Installer
+        run: |
+          makensis windows_installer.nsi
+
+      - name: Upload Windows Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: OrDraftInstaller.exe
+
+  release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      # - name: Download macOS Installer Artifact for macos-12
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: macos-installer-macos-12
+      #     path: macos_installer/macos-12
+
+      # - name: Download macOS Installer Artifact for macos-latest
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: macos-installer-macos-latest
+      #     path: macos_installer/macos-latest
+
+      - name: Download Windows Installer Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: windows_installer
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+
+      # - name: Upload macOS Release Asset (macos-12)
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: macos_installer/macos-12/OrDraft.app.zip
+      #     asset_name: OrDraft_macos-12.app.zip
+      #     asset_content_type: application/zip
+
+      # - name: Upload macOS Release Asset (macos-latest)
+      #   uses: actions/upload-release-asset@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #     asset_path: macos_installer/macos-latest/OrDraft.app.zip
+      #     asset_name: OrDraft_macos-latest.app.zip
+      #     asset_content_type: application/zip
+
+      - name: Upload Windows Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: windows_installer/OrDraftInstaller.exe
+          asset_name: OrDraftInstaller.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
