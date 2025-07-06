@@ -68,6 +68,7 @@ class Config(QConfig):
     )
     save_location = ConfigItem("App", "SaveLocation", "")
     ocr_enable = ConfigItem("App", "EnableOCR", False, BoolValidator())
+    api_key = ConfigItem("App", "ApiKey", "")
 
 
 class Container(QFrame):
@@ -428,13 +429,6 @@ class Window(FluentWindow):
         # Dependencies
         self.view_model = MainViewModel(Data())
 
-        # Dependencies Connections
-        self.view_model.docEvents.connect(self.generate_events)
-        self.view_model.now_running.connect(self.update_document_status)
-        self.view_model.chatbox_update.connect(self.update_chatbox)
-        self.view_model.llm_stream_finished.connect(self._finished)
-        self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
-        self.view_model.errorOccured.connect(self._handle_error)
 
         self.initNavigation()
         self.initWindow()
@@ -452,6 +446,16 @@ class Window(FluentWindow):
         self.connections()
 
         self.handle_new_document()
+
+        # Dependencies Connections
+        self.view_model.docEvents.connect(self.generate_events)
+        self.view_model.now_running.connect(self.update_document_status)
+        self.view_model.chatbox_update.connect(self.update_chatbox)
+        self.view_model.llm_stream_finished.connect(self._finished)
+        self.view_model.stream_stopped_sucess.connect(self._stream_stopped_success)
+        self.view_model.errorOccured.connect(self._handle_error)
+
+        self.view_model.load_llm()
 
     def _moved_data(self):
         try:
@@ -500,8 +504,10 @@ class Window(FluentWindow):
         save_loc = self.cfg.save_location.value
         try:
             self.view_model.ocr_enabled = self.cfg.ocr_enable.value
+            self.view_model.api_key = self.cfg.api_key.value
         except AttributeError:
             self.view_model.ocr_enabled = self.cfg.ocr_enable
+            self.view_model.api_key = self.cfg.api_key
 
         if not len(save_loc) == 0:
             self._save_location(save_loc)
@@ -558,12 +564,12 @@ class Window(FluentWindow):
             content="Set the background of the views to transparent",
             configItem=self.cfg.transparent_bg,
         )
-        self.api_url = CustomPushSettingCard(
+        self.api_key = CustomPushSettingCard(
             text="Change",
             icon=CFIF.URL,
             title="API",
-            content="DO NOT CHANGE. Unless the API url supports OpenAI-like endpoints",
-            data=URL,
+            content="This app currently only supports api key",
+            data="",
             parent=self,
         )
 
@@ -576,7 +582,7 @@ class Window(FluentWindow):
         transparent.switchButton.setChecked(self.cfg.transparent_bg.value)
 
         # Connections: App
-        self.api_url.button.clicked.connect(self._show_change_api_url)
+        self.api_key.button.clicked.connect(self._show_change_api_key)
         self.template_dir.button.clicked.connect(self.show_template_dir)
         self.ocr_enable.switchButton.checkedChanged.connect(self.ocr_enable_change)
 
@@ -621,7 +627,7 @@ class Window(FluentWindow):
             development, alignment=Qt.AlignmentFlag.AlignTop
         )
         self.settings_interface.vBoxlayout.addWidget(
-            self.api_url, alignment=Qt.AlignmentFlag.AlignTop
+            self.api_key, alignment=Qt.AlignmentFlag.AlignTop
         )
 
     def _change_visual(self, *args, **kwargs):
@@ -639,7 +645,7 @@ class Window(FluentWindow):
                 if dark_theme
                 else """QLabel { color: #D32F2F; }"""
             )
-            self.api_url.contentLabel.setStyleSheet(style)
+            self.api_key.contentLabel.setStyleSheet(style)
 
         if transparent is not None:
             self.toggleStackedBackground(transparent)
@@ -649,24 +655,38 @@ class Window(FluentWindow):
         self._update_queue_list_item_theme(dark_theme)
         self.cfg.save()
 
-    def _show_change_api_url(self):
-        self.line_edit_message_box.titleLabel.setText("Change API URL")
-        self.line_edit_message_box.urlLineEdit.setPlaceholderText("New API URL")
+    def _show_change_api_key(self):
+        self.line_edit_message_box.titleLabel.setText("Change API Key")
+        self.line_edit_message_box.urlLineEdit.setPlaceholderText("New API Key")
+
+        placeholder = "******"
+        if type(self.cfg.api_key) is str and len(self.cfg.api_key) == 0:
+            placeholder = ""
+        
+        self.line_edit_message_box.urlLineEdit.setText(placeholder)
+            
         test = self.line_edit_message_box.exec()
 
         if test == 1:
-            self._handle_change_api_url()
+            self._handle_change_api_key()
 
-    def _handle_change_api_url(self):
-        if self.line_edit_message_box.validate_url():
-            self.api_url.data = self.line_edit_message_box.urlLineEdit.text()
-            self.line_edit_message_box.close()
-            self.line_edit_message_box.warningLabel.hide()
+    def _handle_change_api_key(self):
+        if self.line_edit_message_box.validate():
+            new_key = self.line_edit_message_box.urlLineEdit.text()
+
+            if new_key != "******":   
+                self.cfg.api_key.value = new_key
+                self.api_key.data = new_key
+                self.line_edit_message_box.close()
+                self.line_edit_message_box.warningLabel.hide()
+                self.cfg.save()
         else:
             self.line_edit_message_box.urlLineEdit.setText("")
             self.line_edit_message_box.warningLabel.show()
-            self._show_change_api_url()
+            self._show_change_api_key()
 
+        print(self.cfg.api_key.value)
+        
     def toggleStackedBackground(self, state: bool):
         """Toggle the background transparency of the stacked widget"""
         current_widget = self.stackedWidget.currentWidget()
@@ -1041,6 +1061,8 @@ class Window(FluentWindow):
         if self.message_box.exec():
             pass
 
+        self.enable_buttons()
+
     @pyqtSlot(bool)
     def ocr_enable_change(self, state):
         if state != self.view_model.ocr_enabled:
@@ -1095,6 +1117,11 @@ class Window(FluentWindow):
 
     def generate(self):
         self.disable_buttons()
+        api_key = self.cfg.api_key.value
+        if type(api_key) is str and len(api_key) == 0:
+            self._handle_error("Add api key first")
+            return
+
         current_item = self.current_queue_item()
         document = self.view_model.get_document(current_item.id)
 
@@ -1106,11 +1133,17 @@ class Window(FluentWindow):
         self.generate_doc_btn_pr.setEnabled(False)
         self.stream_view.chatbox.setPlainText("")
         try:
+            try:
+                template = TemplateType(self.template_combobox_pr.currentText())
+            except Exception:
+                raise ValueError("Invalid template")
+                
+
             item: QueueItem = self.current_queue_item()
             document = self.view_model.documents[item.id]
 
             data = GenerateDocData(
-                url=self.api_url.data,
+                url=self.api_key.data,
                 pdf_path=self.file_button_pr.data,
                 save_path=self.save_location_btn_pr.data,
                 is_reply_included=self.include_reply_pr.isChecked(),
@@ -1221,6 +1254,10 @@ class Window(FluentWindow):
         self.template_combobox_pr.setEnabled(False)
         self.include_reply_pr.setEnabled(False)
 
+    def enable_buttons(self):
+        self.file_button_pr.setEnabled(True)
+        self.template_combobox_pr.setEnabled(True)
+        self.include_reply_pr.setEnabled(True)
 
     @pyqtSlot(Document)
     def update_document_status(self, document: Document):

@@ -40,10 +40,11 @@ class MainViewModel(QObject):
     stream_stopped_sucess = pyqtSignal(bool)
     
 
-    def __init__(self, data_model: Data = None):
+    def __init__(self, data_model: Data = None, api_key = ""):
         super().__init__()
 
         self.ocr_enabled = False
+        self.api_key = api_key
 
         self._data_model = data_model
         self.word_processor = WordPlaceholderReplacer()
@@ -51,14 +52,18 @@ class MainViewModel(QObject):
         self._documents = DocumentsCollection()
         self._document: Document = None
         self._doc_map = {}
-
-        # Cloud LLMs
-        self._cloud_llm = CloudLLM()
-        self._local_llm = ModelLLM()
         
         # Agents
         self.setup_agents()
+        
+        self._llm_state: StateLLM = None
 
+        self._thinking = False
+        self._stream_stopped = False
+
+    def load_llm(self):
+        self._cloud_llm = CloudLLM(api_key=self.api_key)
+        self._local_llm = ModelLLM()
         
         # Connections
         self._cloud_llm.text_chunk.connect(self._update_chat_box)
@@ -68,12 +73,7 @@ class MainViewModel(QObject):
         self._cloud_llm.stream_finished.connect(self._cloud_llm_stream_finished)
         self._cloud_llm.stream_start.connect(self._start_streaming)
         self._cloud_llm.stream_stopped.connect(self._stream_stopped_success)
-        
-        self._llm_state: StateLLM = None
 
-        self._thinking = False
-        self._stream_stopped = False
-        
     @property
     def documents(self) -> DocumentsCollection:
         return self._documents

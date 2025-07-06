@@ -1,5 +1,5 @@
 from pkgs.api import ApiWorker
-from pkgs.config import DismissalGuidelines, DEFAULT_INSTRUCTIONS, URL, ORDRAFT_USER, ORDRAFT_ADMIN
+from pkgs.config import DismissalGuidelines, DEFAULT_INSTRUCTIONS, URL
 from pkgs.enums import TemplateFile, TemplateType, Models, DocumentStatus
 from pkgs.placeholder_replacer import WordPlaceholderReplacer
 from pkgs.main_vm import MainViewModel

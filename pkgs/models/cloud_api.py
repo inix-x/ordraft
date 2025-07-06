@@ -41,7 +41,7 @@ from pkgs.config import (
     SYSTEM_PROMPT,
 )
 from pkgs.dataclass import Document
-from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY
+# from pkgs.config import ORDRAFT_ADMIN, NOVITA_KEY
 from pkgs.enums import TemplateType
 
 # fmt: on
@@ -66,220 +66,220 @@ class StateLLM(Enum):
     Running = "running"
 
 
-class HuggingFaceAPI(QObject):
-    llm_state_changed = pyqtSignal(StateLLM)
-    error_occured = pyqtSignal(object)
-    llm_state_checked = pyqtSignal(StateLLM)
+# class HuggingFaceAPI(QObject):
+#     llm_state_changed = pyqtSignal(StateLLM)
+#     error_occured = pyqtSignal(object)
+#     llm_state_checked = pyqtSignal(StateLLM)
 
-    def __init__(self):
-        super().__init__()
-        self._endpoint =  __ENDPOINT_NAME_V2__
-        self._namespace = __ENDPOINT_NAMESPACE__
-        self._api_url: URL = __API_URL__
+#     def __init__(self):
+#         super().__init__()
+#         self._endpoint =  __ENDPOINT_NAME_V2__
+#         self._namespace = __ENDPOINT_NAMESPACE__
+#         self._api_url: URL = __API_URL__
 
-        self._headers = {
-            "content-type": "application/json",
-            "authorization": f"Bearer {ORDRAFT_ADMIN}"
-        }
-        self._llm_endpoint = None
-        self._llm_model = None
-        self._llm_endpoint_state: StateLLM = None        
+#         self._headers = {
+#             "content-type": "application/json",
+#             "authorization": f"Bearer {ORDRAFT_ADMIN}"
+#         }
+#         self._llm_endpoint = None
+#         self._llm_model = None
+#         self._llm_endpoint_state: StateLLM = None        
 
-    @property
-    def llm_state(self) -> StateLLM:
-        if self._llm_endpoint_state is None:
-            self._llm_endpoint_state = self.get_llm_state()
+#     @property
+#     def llm_state(self) -> StateLLM:
+#         if self._llm_endpoint_state is None:
+#             self._llm_endpoint_state = self.get_llm_state()
 
-        return self._llm_endpoint_state
+#         return self._llm_endpoint_state
 
-    @llm_state.setter
-    def llm_state(self, state: StateLLM):
-        if self._llm_endpoint_state != state and \
-            isinstance(state, StateLLM):
-            self._llm_endpoint_state = state
+#     @llm_state.setter
+#     def llm_state(self, state: StateLLM):
+#         if self._llm_endpoint_state != state and \
+#             isinstance(state, StateLLM):
+#             self._llm_endpoint_state = state
         
-    @property
-    def llm_endpoint(self):
-        return self._llm_endpoint
+#     @property
+#     def llm_endpoint(self):
+#         return self._llm_endpoint
 
-    @llm_endpoint.setter
-    def llm_endpoint(self, url: URL):
-        if not isinstance(url, URL):
-            raise TypeError(f"url is not type of {type(url)}, must be a valid url.")
+#     @llm_endpoint.setter
+#     def llm_endpoint(self, url: URL):
+#         if not isinstance(url, URL):
+#             raise TypeError(f"url is not type of {type(url)}, must be a valid url.")
 
-        self._llm_endpoint = url
+#         self._llm_endpoint = url
 
-    @property
-    def llm_model(self):
-        return self._llm_model
+#     @property
+#     def llm_model(self):
+#         return self._llm_model
 
-    @llm_endpoint.setter
-    def llm_endpoint(self, model: str):
-        if not isinstance(model, str):
-            raise TypeError("model is not a valid type")
+#     @llm_endpoint.setter
+#     def llm_endpoint(self, model: str):
+#         if not isinstance(model, str):
+#             raise TypeError("model is not a valid type")
 
-        self._llm_endpoint = model
+#         self._llm_endpoint = model
 
-    def initialize(self):
-        success, res = self._get_endpoint_information()
+#     def initialize(self):
+#         success, res = self._get_endpoint_information()
 
-        if success is False:
-            raise RuntimeError(f"Unable to initialize HuggingFaceAPI: {res}")
+#         if success is False:
+#             raise RuntimeError(f"Unable to initialize HuggingFaceAPI: {res}")
 
-        status: dict = res.get("status")
-        state: str = status.get("state")
+#         status: dict = res.get("status")
+#         state: str = status.get("state")
 
-        if state == "running":
-            self.llm_endpoint = status.get("url")
+#         if state == "running":
+#             self.llm_endpoint = status.get("url")
 
-    def get_llm_state(self) -> StateLLM:
-        success, res = self._get_endpoint_information()
+#     def get_llm_state(self) -> StateLLM:
+#         success, res = self._get_endpoint_information()
 
-        if success is False:
-            raise RuntimeError(f"Unable to get LLM State: {res}")
+#         if success is False:
+#             raise RuntimeError(f"Unable to get LLM State: {res}")
 
-        status: dict = res.get("status")
-        state: str = status.get("state")
+#         status: dict = res.get("status")
+#         state: str = status.get("state")
 
-        if state is None:
-            raise ValueError("Missing 'state' key in status.")
+#         if state is None:
+#             raise ValueError("Missing 'state' key in status.")
 
-        state_enum = None
-        try:
-            state_enum = StateLLM(state)
-            self.llm_state_changed.emit(state_enum)
-        except ValueError:
-            self.error_occured.emit(ValueError(f"Invalid state: {state}"))
-        finally:
-            return state_enum
+#         state_enum = None
+#         try:
+#             state_enum = StateLLM(state)
+#             self.llm_state_changed.emit(state_enum)
+#         except ValueError:
+#             self.error_occured.emit(ValueError(f"Invalid state: {state}"))
+#         finally:
+#             return state_enum
 
-    def get_llm_endpoint(self) -> URL:
-        success, res = self._get_endpoint_information()
+#     def get_llm_endpoint(self) -> URL:
+#         success, res = self._get_endpoint_information()
 
-        if success is False:
-            raise RuntimeError(f"Unable to get LLM State: {res}")
+#         if success is False:
+#             raise RuntimeError(f"Unable to get LLM State: {res}")
 
-        status: dict = res.get("status")
-        url: str = status.get("url")
+#         status: dict = res.get("status")
+#         url: str = status.get("url")
 
-        if not isinstance(url, URL):
-            raise TypeError("url provided not a valid")
+#         if not isinstance(url, URL):
+#             raise TypeError("url provided not a valid")
 
-        self.llm_endpoint = url
+#         self.llm_endpoint = url
 
-    def resume_llm_endpoint(self):
-        res = {}
-        success = True
-        try:
-            url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/resume"
-            response = requests.post(url, headers=self._headers, timeout=300)
-            response.raise_for_status()
+#     def resume_llm_endpoint(self):
+#         res = {}
+#         success = True
+#         try:
+#             url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/resume"
+#             response = requests.post(url, headers=self._headers, timeout=300)
+#             response.raise_for_status()
 
-            res = response.json()
-        except requests.RequestException as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        except Exception as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        finally:
-            return success, res
+#             res = response.json()
+#         except requests.RequestException as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         except Exception as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         finally:
+#             return success, res
 
-    def stop_llm_endpoint(self):
-        res = {}
-        success = True
-        try:
-            url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/pause"
-            response = requests.post(url, headers=self._headers, timeout=300)
-            response.raise_for_status()
+#     def stop_llm_endpoint(self):
+#         res = {}
+#         success = True
+#         try:
+#             url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}/pause"
+#             response = requests.post(url, headers=self._headers, timeout=300)
+#             response.raise_for_status()
 
-            res = response.json()
-        except requests.RequestException as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        except Exception as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        finally:
-            return success, res
+#             res = response.json()
+#         except requests.RequestException as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         except Exception as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         finally:
+#             return success, res
 
-    def start_llm_service(self):
-        if self.llm_state in [StateLLM.Running, 
-            StateLLM.Pending, StateLLM.Updating]:
-            self.llm_state_checked.emit(self.llm_state)
-            return
+#     def start_llm_service(self):
+#         if self.llm_state in [StateLLM.Running, 
+#             StateLLM.Pending, StateLLM.Updating]:
+#             self.llm_state_checked.emit(self.llm_state)
+#             return
         
-        success, res = self.resume_llm_endpoint()
+#         success, res = self.resume_llm_endpoint()
 
-        if success is False:
-            return success, res
+#         if success is False:
+#             return success, res
         
-        status:dict = res.get("status")
-        state = status.get("state")
+#         status:dict = res.get("status")
+#         state = status.get("state")
 
-        if state not in StateLLM._value2member_map_:
-            raise ValueError(f"State is not valid {state}")
+#         if state not in StateLLM._value2member_map_:
+#             raise ValueError(f"State is not valid {state}")
             
-        state_enum = StateLLM(state)
-        self.llm_state = state_enum
-        self.llm_state_changed.emit(state_enum)
+#         state_enum = StateLLM(state)
+#         self.llm_state = state_enum
+#         self.llm_state_changed.emit(state_enum)
         
-        return success, res
+#         return success, res
 
-    def stop_llm_service(self):
-        if self.llm_state not in [StateLLM.Running, 
-            StateLLM.Pending, StateLLM.Updating, StateLLM.Initializing]:
-            self.llm_state_checked.emit(self.llm_state)
-            return
+#     def stop_llm_service(self):
+#         if self.llm_state not in [StateLLM.Running, 
+#             StateLLM.Pending, StateLLM.Updating, StateLLM.Initializing]:
+#             self.llm_state_checked.emit(self.llm_state)
+#             return
         
-        success, res = self.stop_llm_endpoint()
+#         success, res = self.stop_llm_endpoint()
 
-        if success is False:
-            return success, res
+#         if success is False:
+#             return success, res
         
-        status:dict = res.get("status")
-        state = status.get("state")
+#         status:dict = res.get("status")
+#         state = status.get("state")
 
-        if state not in StateLLM._value2member_map_:
-            raise ValueError(f"State is not valid {state}")
+#         if state not in StateLLM._value2member_map_:
+#             raise ValueError(f"State is not valid {state}")
             
-        state_enum = StateLLM(state)
-        self.llm_state = state_enum
-        self.llm_state_changed.emit(state_enum)
+#         state_enum = StateLLM(state)
+#         self.llm_state = state_enum
+#         self.llm_state_changed.emit(state_enum)
         
-        return success, res
+#         return success, res
 
-    # -----Private-----
-    def _get_endpoint_information(self) -> tuple[bool, dict]:
-        """
-        Sends a GET request to the API endpoint.
+#     # -----Private-----
+#     def _get_endpoint_information(self) -> tuple[bool, dict]:
+#         """
+#         Sends a GET request to the API endpoint.
 
-        Returns:
-            dict: The JSON response from the API or None if the request fails.
-        """
+#         Returns:
+#             dict: The JSON response from the API or None if the request fails.
+#         """
         
-        res = {}
-        success = True
-        try:
-            url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}"
-            response = requests.get(url, headers=self._headers, timeout=300)
-            response.raise_for_status()
+#         res = {}
+#         success = True
+#         try:
+#             url = f"{self._api_url}/v2/endpoint/{self._namespace}/{self._endpoint}"
+#             response = requests.get(url, headers=self._headers, timeout=300)
+#             response.raise_for_status()
 
-            res = response.json()
-        except requests.RequestException as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        except Exception as e:
-            print(f"Error occurred during API request: {e}")
-            success = False
-            res = e
-        finally:
-            return success, res
+#             res = response.json()
+#         except requests.RequestException as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         except Exception as e:
+#             print(f"Error occurred during API request: {e}")
+#             success = False
+#             res = e
+#         finally:
+#             return success, res
 
 
 class CloudLLM(QObject):
@@ -292,7 +292,7 @@ class CloudLLM(QObject):
     stream_start = pyqtSignal(bool)
     stream_stopped = pyqtSignal(bool)
 
-    def __init__(self):
+    def __init__(self, api_key):
         super().__init__()
 
         # self._hugging_face_api = HuggingFaceAPI()
@@ -300,7 +300,7 @@ class CloudLLM(QObject):
         
         self._llm_client = OpenAI(
             base_url="https://api.novita.ai/v3/openai",
-            api_key=NOVITA_KEY
+            api_key=api_key
             )
         
         
